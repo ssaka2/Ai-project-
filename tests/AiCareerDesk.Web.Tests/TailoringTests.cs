@@ -148,4 +148,21 @@ public class TailoringTests
         using var carol = gate.Enter("carol");
         Assert.Throws<TailoringException>(() => gate.Enter("dave"));
     }
+
+    [Fact]
+    public async Task DatabaseConcurrencyTokenRejectsTwoAlreadyTrackedWriters()
+    {
+        await using var f = new Fixture(); await f.StartAsync();
+        await using var first = f.NewContext();
+        await using var second = f.NewContext();
+        var a = await first.ResumeDrafts.SingleAsync(x => x.Id == f.DraftId);
+        var b = await second.ResumeDrafts.SingleAsync(x => x.Id == f.DraftId);
+        Assert.Equal(a.Version, b.Version);
+        var oldVersion = a.Version;
+        Assert.Equal(DraftWriteResult.Saved, await new ResumeService(first).UpdateDraftAsync("alice", f.DraftId,
+            new DraftInput { Version = oldVersion, Content = "First writer" }));
+        Assert.Equal(DraftWriteResult.Conflict, await new ResumeService(second).UpdateDraftAsync("alice", f.DraftId,
+            new DraftInput { Version = oldVersion, Content = "Second writer" }));
+        Assert.Equal("First writer", (await new ResumeService(f.Db).GetDraftAsync("alice", f.DraftId))!.Content);
+    }
 }

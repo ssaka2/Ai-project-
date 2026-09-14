@@ -22,6 +22,31 @@ jobs:
           ConnectionStrings__DefaultConnection: "Server=localhost;Database=SchemaDesignOnly;Integrated Security=true;TrustServerCertificate=true"
         run: dotnet ef migrations has-pending-model-changes --project src/AiCareerDesk.Web
       - run: dotnet build AiCareerDesk.slnx --configuration Release --no-restore
+      - name: Install Chromium for browser verification
+        run: pwsh tests/AiCareerDesk.Web.Tests/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
+      - name: Audit dependency advisories
+        shell: bash
+        run: |
+          mkdir -p TestResults
+          dotnet list AiCareerDesk.slnx package --vulnerable --include-transitive --format json > TestResults/nuget-audit.json
+      - name: Verify dependency audit
+        shell: python
+        run: |
+          import json
+          from pathlib import Path
+          report = json.loads(Path("TestResults/nuget-audit.json").read_text())
+          findings = []
+          for project in report.get("projects", []):
+              for framework in project.get("frameworks", []):
+                  for group in ("topLevelPackages", "transitivePackages"):
+                      for package in framework.get(group, []):
+                          if package.get("vulnerabilities"):
+                              findings.append(package["id"])
+          print("Dependency advisory findings:", len(findings))
+          if findings:
+              raise SystemExit("Vulnerable packages: " + ", ".join(sorted(set(findings))))
+          if any(item.get("level", "").lower() == "error" for item in report.get("logs", [])):
+              raise SystemExit("Dependency audit reported an error.")
       - name: Start disposable SQL Server
         shell: bash
         run: |
@@ -37,7 +62,10 @@ jobs:
           done
           echo "SQL Server did not become ready."
           exit 1
-      - run: dotnet test AiCareerDesk.slnx --configuration Release --no-build --logger trx --results-directory TestResults
+      - name: Run service, SQL Server, and browser verification
+        env:
+          RUN_BROWSER_TESTS: "true"
+        run: dotnet test AiCareerDesk.slnx --configuration Release --no-build --logger trx --results-directory TestResults
       - uses: actions/upload-artifact@v4
         if: always()
         with:
