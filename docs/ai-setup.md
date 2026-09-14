@@ -70,7 +70,7 @@ Draft edits and suggestion acceptance carry an optimistic concurrency token.
 If another session saves first, the stale request gets HTTP 409. The draft editor
 keeps submitted text visible; open the latest saved draft in a new tab to compare
 and copy desired changes. On the suggestion page, reload the comparison before
-deciding whether to apply. Jobs and base resumes still use last-write-wins.
+deciding whether to apply. Jobs and base resumes also reject stale saves and preserve submitted edits.
 
 ## Validation limits
 

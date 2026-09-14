@@ -20,6 +20,8 @@ public class MigrationUpgradeTests
         await using var db = new ApplicationDbContext(new DbContextOptionsBuilder<ApplicationDbContext>()
             .UseSqlServer(connection.ConnectionString).Options);
         var draftId = Guid.NewGuid();
+        var resumeId = Guid.NewGuid();
+        var jobId = Guid.NewGuid();
         var ownerId = "upgrade-user";
         try
         {
@@ -31,6 +33,11 @@ public class MigrationUpgradeTests
                     INSERT INTO AspNetUsers
                     (Id, EmailConfirmed, PhoneNumberConfirmed, TwoFactorEnabled, LockoutEnabled, AccessFailedCount)
                     VALUES (@owner, 0, 0, 0, 0, 0);
+                    INSERT INTO Jobs
+                    (Id, OwnerId, Title, Company, Location, ApplicationUrl, Description, Notes, Status, CreatedUtc, UpdatedUtc)
+                    VALUES (@job, @owner, 'Existing job', 'Example', '', '', 'Original job', '', 0, SYSUTCDATETIME(), SYSUTCDATETIME());
+                    INSERT INTO Resumes (Id, OwnerId, Name, Content, UpdatedUtc)
+                    VALUES (@resume, @owner, 'Existing resume', 'Original resume', SYSUTCDATETIME());
                     INSERT INTO ResumeDrafts
                     (Id, OwnerId, SourceResumeId, SourceJobId, Name, ResumeSnapshot,
                      JobDescriptionSnapshot, Content, CreatedUtc, UpdatedUtc)
@@ -39,13 +46,23 @@ public class MigrationUpgradeTests
                     """;
                 command.Parameters.Add(new SqlParameter("@owner", ownerId));
                 command.Parameters.Add(new SqlParameter("@id", draftId));
-                command.Parameters.Add(new SqlParameter("@resume", Guid.NewGuid()));
-                command.Parameters.Add(new SqlParameter("@job", Guid.NewGuid()));
+                command.Parameters.Add(new SqlParameter("@resume", resumeId));
+                command.Parameters.Add(new SqlParameter("@job", jobId));
                 await command.ExecuteNonQueryAsync();
             }
             await db.Database.CloseConnectionAsync();
             await db.Database.MigrateAsync();
             var service = new ResumeService(db);
+            var resume = (await service.GetAsync(ownerId, resumeId))!;
+            Assert.Equal("Original resume", resume.Content);
+            Assert.Equal(WriteResult.Saved, await service.UpdateAsync(ownerId, resumeId,
+                new ResumeInput { Name = resume.Name, Content = "Updated after migration", Version = resume.Version }));
+            var jobs = new JobService(db);
+            var job = (await jobs.GetAsync(ownerId, jobId))!;
+            Assert.Equal("Existing job", job.Title);
+            Assert.Equal(WriteResult.Saved, await jobs.UpdateAsync(ownerId, jobId,
+                new JobInput { Title = job.Title, Company = job.Company, Status = ApplicationStatus.Applied, Version = job.Version }));
+            Assert.Single(await jobs.HistoryAsync(ownerId, jobId));
             var draft = (await service.GetDraftAsync(ownerId, draftId))!;
             Assert.Equal("Keep these edits", draft.Content);
             Assert.Equal("Original resume", draft.ResumeSnapshot);
