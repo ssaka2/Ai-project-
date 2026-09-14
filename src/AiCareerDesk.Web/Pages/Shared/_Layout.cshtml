@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@ViewData["Title"] — AI Career Desk</title>
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+<header><nav aria-label="Main navigation">
+    <a class="brand" asp-page="/Index">AI Career Desk</a>
+    <a asp-page="/Jobs/Index">My jobs</a>
+    <partial name="_LoginPartial" />
+</nav></header>
+<main>@RenderBody()</main>
+<footer>AI Career Desk · Development preview</footer>
+@await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

@@ -1,0 +1,17 @@
+@page
+@model AiCareerDesk.Web.Pages.Jobs.CreateModel
+@{ ViewData["Title"] = "Save a job"; }
+<h1>Save a job</h1>
+<form method="post" class="editor">
+    <div asp-validation-summary="All" class="validation" role="alert"></div>
+    <label asp-for="Input.Title"></label><input asp-for="Input.Title" />
+    <label asp-for="Input.Company"></label><input asp-for="Input.Company" />
+    <label asp-for="Input.Location"></label><input asp-for="Input.Location" />
+    <label asp-for="Input.ApplicationUrl"></label><input asp-for="Input.ApplicationUrl" />
+    <label asp-for="Input.Description"></label><textarea asp-for="Input.Description" rows="8"></textarea>
+    <label asp-for="Input.Notes"></label><textarea asp-for="Input.Notes" rows="4"></textarea>
+    <label asp-for="Input.Status"></label><select asp-for="Input.Status" asp-items="Html.GetEnumSelectList<ApplicationStatus>()"></select>
+    <p>Choose Applied only after you have submitted your application on the employer's website.</p>
+    <button type="submit">Save job</button>
+    <a asp-page="Index">Cancel</a>
+</form>

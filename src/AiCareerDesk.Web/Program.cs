@@ -1,0 +1,43 @@
+using AiCareerDesk.Web.Data;
+using AiCareerDesk.Web.Services;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+
+var builder = WebApplication.CreateBuilder(args);
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? throw new InvalidOperationException("Set ConnectionStrings:DefaultConnection with user secrets or environment variables.");
+builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseSqlServer(connectionString));
+builder.Services.AddDefaultIdentity<IdentityUser>(options =>
+{
+    // Development foundation: email delivery and confirmation are a release gate.
+    options.SignIn.RequireConfirmedAccount = false;
+    options.User.RequireUniqueEmail = true;
+    options.Password.RequiredLength = 12;
+}).AddEntityFrameworkStores<ApplicationDbContext>();
+builder.Services.AddScoped<JobService>();
+builder.Services.AddRazorPages(options => options.Conventions.AuthorizeFolder("/Jobs"));
+
+var app = builder.Build();
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler("/Error");
+    app.UseHsts();
+}
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+app.UseRouting();
+app.UseAuthentication();
+app.UseAuthorization();
+app.MapRazorPages();
+
+// Explicitly opt in for a fresh, disposable development database only.
+// Replace with committed migrations before retaining real data or deploying.
+if (app.Environment.IsDevelopment() &&
+    builder.Configuration.GetValue<bool>("Database:InitializeDevelopmentDatabase"))
+{
+    using var scope = app.Services.CreateScope();
+    await scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Database.EnsureCreatedAsync();
+}
+app.Run();
+
+public partial class Program { }

@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="src/AiCareerDesk.Web/AiCareerDesk.Web.csproj" />
+  <Project Path="tests/AiCareerDesk.Web.Tests/AiCareerDesk.Web.Tests.csproj" />
+</Solution>
