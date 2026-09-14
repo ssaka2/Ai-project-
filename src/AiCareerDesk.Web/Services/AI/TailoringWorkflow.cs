@@ -47,15 +47,15 @@ public class TailoringWorkflow(ApplicationDbContext db, IResumeTailoringService 
         return suggestion.Id;
     }
 
-    public async Task<DraftWriteResult> ApplyAsync(string owner, Guid draftId, Guid suggestionId, Guid expectedVersion)
+    public async Task<WriteResult> ApplyAsync(string owner, Guid draftId, Guid suggestionId, Guid expectedVersion)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(owner);
         var draft = await db.ResumeDrafts.SingleOrDefaultAsync(x => x.Id == draftId && x.OwnerId == owner);
-        if (draft is null) return DraftWriteResult.NotFound;
+        if (draft is null) return WriteResult.NotFound;
         var suggestion = await db.TailoringSuggestions.AsNoTracking()
             .SingleOrDefaultAsync(x => x.Id == suggestionId && x.ResumeDraftId == draftId);
-        if (suggestion is null) return DraftWriteResult.NotFound;
-        if (draft.Version != expectedVersion) return DraftWriteResult.Conflict;
+        if (suggestion is null) return WriteResult.NotFound;
+        if (draft.Version != expectedVersion) return WriteResult.Conflict;
         draft.Content = suggestion.Content;
         draft.Version = Guid.NewGuid();
         draft.UpdatedUtc = DateTime.UtcNow;
@@ -63,8 +63,8 @@ public class TailoringWorkflow(ApplicationDbContext db, IResumeTailoringService 
         catch (DbUpdateConcurrencyException)
         {
             db.Entry(draft).State = EntityState.Detached;
-            return DraftWriteResult.Conflict;
+            return WriteResult.Conflict;
         }
-        return DraftWriteResult.Saved;
+        return WriteResult.Saved;
     }
 }

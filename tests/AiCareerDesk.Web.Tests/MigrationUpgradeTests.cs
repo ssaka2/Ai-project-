@@ -50,7 +50,7 @@ public class MigrationUpgradeTests
             Assert.Equal("Keep these edits", draft.Content);
             Assert.Equal("Original resume", draft.ResumeSnapshot);
             Assert.Equal("Original job", draft.JobDescriptionSnapshot);
-            Assert.Equal(DraftWriteResult.Saved, await service.UpdateDraftAsync(ownerId, draftId,
+            Assert.Equal(WriteResult.Saved, await service.UpdateDraftAsync(ownerId, draftId,
                 new DraftInput { Content = "Edit after upgrade", Version = draft.Version }));
             Assert.NotEqual(draft.Version, (await service.GetDraftAsync(ownerId, draftId))!.Version);
             Assert.False(db.Database.HasPendingModelChanges());

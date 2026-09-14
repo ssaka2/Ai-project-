@@ -17,7 +17,7 @@ public class PageTests
                 {
                     ["ConnectionStrings:DefaultConnection"] =
                         "Server=localhost;Database=UnusedPageTests;Integrated Security=true;TrustServerCertificate=true",
-                    ["Database:InitializeDevelopmentDatabase"] = "false"
+                    ["Identity:RequireConfirmedAccount"] = "false"
                 }));
         });
 

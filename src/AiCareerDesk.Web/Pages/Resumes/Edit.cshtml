@@ -2,7 +2,9 @@
 @model AiCareerDesk.Web.Pages.Resumes.EditModel
 @{ ViewData["Title"] = "Base resume"; }
 <h1>Base resume</h1>
+<p><a href="@Request.Path" target="_blank" rel="noopener">Open latest saved version in a new tab</a></p>
 <form method="post" class="editor">
+    <input type="hidden" asp-for="Input.Version" />
     <div asp-validation-summary="All" class="validation" role="alert"></div>
     <label asp-for="Input.Name">Resume name</label><input asp-for="Input.Name" />
     <label asp-for="Input.Content">Resume text</label><textarea asp-for="Input.Content" rows="22"></textarea>

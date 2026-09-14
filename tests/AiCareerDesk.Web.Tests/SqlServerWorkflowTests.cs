@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Identity.UI.Services;
 using AiCareerDesk.Web.Models;
 using AiCareerDesk.Web.Services;
 using AiCareerDesk.Web.Services.AI;
@@ -25,10 +26,15 @@ public sealed class SqlServerFactAttribute : FactAttribute
 
 public class SqlServerWorkflowTests
 {
-    private static WebApplicationFactory<Program> Factory(bool enableFakeAi = false) =>
+    private static WebApplicationFactory<Program> Factory(bool enableFakeAi = false, bool requireConfirmation = false) =>
         new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
         {
             builder.UseEnvironment("Testing");
+            builder.ConfigureTestServices(services =>
+            {
+                services.RemoveAll<IEmailSender>();
+                services.AddSingleton<IEmailSender, RecordingEmailSender>();
+            });
             if (enableFakeAi)
                 builder.ConfigureTestServices(services =>
                 {
@@ -38,7 +44,10 @@ public class SqlServerWorkflowTests
             builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(
                 new Dictionary<string, string?>
                 {
-                    ["ConnectionStrings:DefaultConnection"] = Environment.GetEnvironmentVariable("TEST_SQL_CONNECTION")
+                    ["ConnectionStrings:DefaultConnection"] = Environment.GetEnvironmentVariable("TEST_SQL_CONNECTION"),
+                    ["Identity:RequireConfirmedAccount"] = requireConfirmation.ToString(),
+                    ["Email:Enabled"] = "true", ["Email:Host"] = "test-only",
+                    ["Email:FromAddress"] = "test@example.test"
                 }));
         });
 
@@ -240,5 +249,61 @@ public class SqlServerWorkflowTests
         Assert.Contains("AI unavailable", await failed.Content.ReadAsStringAsync());
         Assert.Equal("Suggested C# resume", await alice.GetStringAsync("/Resumes/Draft/" + id + "?handler=Download"));
         Assert.Contains("Suggested C# resume", await alice.GetStringAsync(path));
+    }
+
+    [SqlServerFact]
+    public async Task ConfirmationPasswordRecoveryAndLockoutWork()
+    {
+        await using var factory = Factory(requireConfirmation: true);
+        using (var scope = factory.Services.CreateScope())
+            await scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Database.MigrateAsync();
+        using var client = Client(factory);
+        var email = "confirmed-" + Guid.NewGuid().ToString("N") + "@example.test";
+        await Register(client, email);
+        Assert.Equal(HttpStatusCode.Redirect, (await client.GetAsync("/Jobs")).StatusCode);
+        var blocked = await Post(client, "/Identity/Account/Login", new()
+        {
+            ["Input.Email"] = email, ["Input.Password"] = "Synthetic-Test-Password42!"
+        });
+        Assert.Equal(HttpStatusCode.OK, blocked.StatusCode);
+        Assert.Contains("Unable to sign in", await blocked.Content.ReadAsStringAsync());
+        var sender = (RecordingEmailSender)factory.Services.GetRequiredService<IEmailSender>();
+        var confirmationUrl = WebUtility.HtmlDecode(Regex.Match(sender.Messages[email], """href=['"]([^'"]+)""").Groups[1].Value);
+        Assert.False(string.IsNullOrWhiteSpace(confirmationUrl));
+        var confirmed = await client.GetAsync(confirmationUrl);
+        Assert.Equal(HttpStatusCode.OK, confirmed.StatusCode);
+        var recovery = await Post(client, "/Identity/Account/ForgotPassword", new() { ["Input.Email"] = email });
+        Assert.Equal(HttpStatusCode.Redirect, recovery.StatusCode);
+        var resetUrl = WebUtility.HtmlDecode(Regex.Match(sender.Messages[email], """href=['"]([^'"]+)""").Groups[1].Value);
+        var reset = await Post(client, resetUrl, new()
+        {
+            ["Input.Email"] = email, ["Input.Password"] = "Replacement-Password42!",
+            ["Input.ConfirmPassword"] = "Replacement-Password42!"
+        });
+        Assert.Equal(HttpStatusCode.Redirect, reset.StatusCode);
+        var reused = await Post(client, resetUrl, new()
+        {
+            ["Input.Email"] = email, ["Input.Password"] = "Another-Password42!",
+            ["Input.ConfirmPassword"] = "Another-Password42!"
+        });
+        Assert.Equal(HttpStatusCode.OK, reused.StatusCode);
+        var login = await Post(client, "/Identity/Account/Login", new()
+        {
+            ["Input.Email"] = email, ["Input.Password"] = "Replacement-Password42!"
+        });
+        Assert.Equal(HttpStatusCode.Redirect, login.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/Jobs")).StatusCode);
+        // A separate cookie jar exercises failed-login lockout without signing out this client.
+        using var attacker = Client(factory);
+        for (var i = 0; i < 5; i++)
+            await Post(attacker, "/Identity/Account/Login", new()
+            {
+                ["Input.Email"] = email, ["Input.Password"] = "Wrong-Password42!"
+            });
+        var locked = await Post(attacker, "/Identity/Account/Login", new()
+        {
+            ["Input.Email"] = email, ["Input.Password"] = "Replacement-Password42!"
+        });
+        Assert.Contains("Too many failed attempts", await locked.Content.ReadAsStringAsync());
     }
 }

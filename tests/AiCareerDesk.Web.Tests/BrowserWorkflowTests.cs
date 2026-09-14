@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.Data.SqlClient;
 using System.Diagnostics;
@@ -39,6 +40,11 @@ public class BrowserWorkflowTests
         start.Environment["ASPNETCORE_URLS"] = "http://127.0.0.1:5087";
         start.Environment["ConnectionStrings__DefaultConnection"] = connection;
         start.Environment["AI__Enabled"] = "false";
+        start.Environment["Email__Enabled"] = "true";
+        start.Environment["Email__Host"] = "127.0.0.1";
+        start.Environment["Email__Port"] = "1025";
+        start.Environment["Email__Security"] = "None";
+        start.Environment["Email__FromAddress"] = "career@example.test";
         start.Environment["Logging__LogLevel__Default"] = "Warning";
         start.Environment["Logging__LogLevel__Microsoft"] = "Warning";
         using var server = Process.Start(start)!;
@@ -129,9 +135,17 @@ public class BrowserWorkflowTests
             Assert.Equal(404, (await bob.GotoAsync(draftUrl))!.Status);
             await page.GetByRole(AriaRole.Button, new() { Name = "Sign out", Exact = true }).ClickAsync();
             await Expect(page.GetByRole(AriaRole.Link, new() { Name = "Sign in", Exact = true })).ToBeVisibleAsync();
-            await page.GetByRole(AriaRole.Link, new() { Name = "Sign in", Exact = true }).ClickAsync();
+            await page.GotoAsync("/Identity/Account/ForgotPassword");
             await page.GetByLabel("Email", new() { Exact = true }).FillAsync(email);
-            await page.GetByLabel("Password", new() { Exact = true }).FillAsync("Synthetic-Test-Password42!");
+            await page.Locator("main form button[type=submit]").ClickAsync();
+            await page.GotoAsync(await EmailLink(email, "Reset"));
+            await page.GetByLabel("Email", new() { Exact = true }).FillAsync(email);
+            await page.GetByLabel("Password", new() { Exact = true }).FillAsync("Browser-Replacement42!");
+            await page.GetByLabel(new Regex("^Confirm password$", RegexOptions.IgnoreCase)).FillAsync("Browser-Replacement42!");
+            await page.Locator("main form button[type=submit]").ClickAsync();
+            await page.GotoAsync("/Identity/Account/Login");
+            await page.GetByLabel("Email", new() { Exact = true }).FillAsync(email);
+            await page.GetByLabel("Password", new() { Exact = true }).FillAsync("Browser-Replacement42!");
             await page.GetByRole(AriaRole.Button, new() { Name = "Log in", Exact = true }).ClickAsync();
             await page.GotoAsync(draftUrl);
             await Expect(page.GetByLabel("Draft text")).ToHaveValueAsync("Saved browser draft");
@@ -153,6 +167,31 @@ public class BrowserWorkflowTests
         await page.GetByLabel("Password", new() { Exact = true }).FillAsync("Synthetic-Test-Password42!");
         await page.GetByLabel(new Regex("^Confirm password$", RegexOptions.IgnoreCase)).FillAsync("Synthetic-Test-Password42!");
         await page.GetByRole(AriaRole.Button, new() { Name = "Register", Exact = true }).ClickAsync();
+        await Expect(page.GetByRole(AriaRole.Heading, new() { Name = "Check your email" })).ToBeVisibleAsync();
+        await page.GotoAsync(await EmailLink(email, "Confirm"));
+        await page.GotoAsync("/Identity/Account/Login");
+        await page.GetByLabel("Email", new() { Exact = true }).FillAsync(email);
+        await page.GetByLabel("Password", new() { Exact = true }).FillAsync("Synthetic-Test-Password42!");
+        await page.GetByRole(AriaRole.Button, new() { Name = "Log in", Exact = true }).ClickAsync();
         await Expect(page.GetByRole(AriaRole.Button, new() { Name = "Sign out", Exact = true })).ToBeVisibleAsync();
+    }
+
+    private static async Task<string> EmailLink(string email, string subject)
+    {
+        using var http = new HttpClient { BaseAddress = new Uri("http://127.0.0.1:8025") };
+        for (var attempt = 0; attempt < 30; attempt++)
+        {
+            using var messages = JsonDocument.Parse(await http.GetStringAsync("/api/v1/messages?limit=100"));
+            foreach (var message in messages.RootElement.GetProperty("messages").EnumerateArray())
+            {
+                if (!message.GetProperty("Subject").GetString()!.Contains(subject, StringComparison.OrdinalIgnoreCase) ||
+                    !message.GetProperty("To").EnumerateArray().Any(to => to.GetProperty("Address").GetString() == email)) continue;
+                using var full = JsonDocument.Parse(await http.GetStringAsync("/api/v1/message/" + message.GetProperty("ID").GetString()));
+                var html = full.RootElement.GetProperty("HTML").GetString()!;
+                return WebUtility.HtmlDecode(Regex.Match(html, """href=['"]([^'"]+)""").Groups[1].Value);
+            }
+            await Task.Delay(100);
+        }
+        throw new InvalidOperationException("Expected account email was not captured by the test inbox.");
     }
 }

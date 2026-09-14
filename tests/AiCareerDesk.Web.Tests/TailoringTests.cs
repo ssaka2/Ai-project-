@@ -63,7 +63,7 @@ public class TailoringTests
         {
             await using var other = f.NewContext();
             var service = new ResumeService(other);
-            Assert.Equal(DraftWriteResult.Saved, await service.UpdateDraftAsync("alice", f.DraftId,
+            Assert.Equal(WriteResult.Saved, await service.UpdateDraftAsync("alice", f.DraftId,
                 new DraftInput { Content = "My concurrent edit", Version = originalVersion }));
         };
         var suggestionId = (await f.Workflow.GenerateAsync("alice", f.DraftId, true, default))!.Value;
@@ -74,9 +74,9 @@ public class TailoringTests
         var suggestion = Assert.Single(await f.Workflow.ListAsync("alice", f.DraftId));
         Assert.Equal("fake-model", suggestion.Model);
         Assert.Equal("Cloud certification not evidenced", suggestion.SkillGaps);
-        Assert.Equal(DraftWriteResult.NotFound, await f.Workflow.ApplyAsync("bob", f.DraftId, suggestionId, current.Version));
-        Assert.Equal(DraftWriteResult.Conflict, await f.Workflow.ApplyAsync("alice", f.DraftId, suggestionId, originalVersion));
-        Assert.Equal(DraftWriteResult.Saved, await f.Workflow.ApplyAsync("alice", f.DraftId, suggestionId, current.Version));
+        Assert.Equal(WriteResult.NotFound, await f.Workflow.ApplyAsync("bob", f.DraftId, suggestionId, current.Version));
+        Assert.Equal(WriteResult.Conflict, await f.Workflow.ApplyAsync("alice", f.DraftId, suggestionId, originalVersion));
+        Assert.Equal(WriteResult.Saved, await f.Workflow.ApplyAsync("alice", f.DraftId, suggestionId, current.Version));
         Assert.Equal("Suggested C# resume", (await new ResumeService(f.Db).GetDraftAsync("alice", f.DraftId))!.Content);
         Assert.Equal("Original C# experience", (await new ResumeService(f.Db).GetAsync("alice", f.ResumeId))!.Content);
         Assert.Single(await f.Workflow.ListAsync("alice", f.DraftId));
@@ -128,10 +128,10 @@ public class TailoringTests
         await using var f = new Fixture(); await f.StartAsync();
         var service = new ResumeService(f.Db);
         var version = (await service.GetDraftAsync("alice", f.DraftId))!.Version;
-        Assert.Equal(DraftWriteResult.Saved, await service.UpdateDraftAsync("alice", f.DraftId,
+        Assert.Equal(WriteResult.Saved, await service.UpdateDraftAsync("alice", f.DraftId,
             new DraftInput { Content = "First edit", Version = version }));
         f.Db.ChangeTracker.Clear();
-        Assert.Equal(DraftWriteResult.Conflict, await service.UpdateDraftAsync("alice", f.DraftId,
+        Assert.Equal(WriteResult.Conflict, await service.UpdateDraftAsync("alice", f.DraftId,
             new DraftInput { Content = "Stale edit", Version = version }));
         Assert.Equal("First edit", (await service.GetDraftAsync("alice", f.DraftId))!.Content);
     }
@@ -159,9 +159,9 @@ public class TailoringTests
         var b = await second.ResumeDrafts.SingleAsync(x => x.Id == f.DraftId);
         Assert.Equal(a.Version, b.Version);
         var oldVersion = a.Version;
-        Assert.Equal(DraftWriteResult.Saved, await new ResumeService(first).UpdateDraftAsync("alice", f.DraftId,
+        Assert.Equal(WriteResult.Saved, await new ResumeService(first).UpdateDraftAsync("alice", f.DraftId,
             new DraftInput { Version = oldVersion, Content = "First writer" }));
-        Assert.Equal(DraftWriteResult.Conflict, await new ResumeService(second).UpdateDraftAsync("alice", f.DraftId,
+        Assert.Equal(WriteResult.Conflict, await new ResumeService(second).UpdateDraftAsync("alice", f.DraftId,
             new DraftInput { Version = oldVersion, Content = "Second writer" }));
         Assert.Equal("First writer", (await new ResumeService(f.Db).GetDraftAsync("alice", f.DraftId))!.Content);
     }

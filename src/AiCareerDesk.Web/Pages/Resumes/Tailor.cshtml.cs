@@ -52,8 +52,8 @@ public class TailorModel(ResumeService resumes, TailoringWorkflow workflow) : Pa
     {
         if (!await LoadAsync(id, SuggestionId)) return NotFound();
         var result = await workflow.ApplyAsync(Owner, id, SuggestionId, ExpectedVersion);
-        if (result == DraftWriteResult.NotFound) return NotFound();
-        if (result == DraftWriteResult.Conflict)
+        if (result == WriteResult.NotFound) return NotFound();
+        if (result == WriteResult.Conflict)
         {
             Response.StatusCode = StatusCodes.Status409Conflict;
             ModelState.AddModelError("", "Your saved draft changed. Reload this review page and compare the latest draft before applying a suggestion.");

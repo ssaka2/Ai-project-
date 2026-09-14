@@ -18,7 +18,7 @@ public class EditModel(JobService jobs) : PageModel
         if (job is null) return NotFound();
         Input = new JobInput
         {
-            Title = job.Title, Company = job.Company, Location = job.Location,
+            Version = job.Version, Title = job.Title, Company = job.Company, Location = job.Location,
             ApplicationUrl = job.ApplicationUrl, Description = job.Description,
             Notes = job.Notes, Status = job.Status
         };
@@ -34,7 +34,15 @@ public class EditModel(JobService jobs) : PageModel
             History = await jobs.HistoryAsync(OwnerId, id);
             return Page();
         }
-        if (!await jobs.UpdateAsync(OwnerId, id, Input)) return NotFound();
+        var result = await jobs.UpdateAsync(OwnerId, id, Input);
+        if (result == WriteResult.NotFound) return NotFound();
+        if (result == WriteResult.Conflict)
+        {
+            Response.StatusCode = StatusCodes.Status409Conflict;
+            ModelState.AddModelError("", "This job changed in another session. Your text is kept below. Open the latest saved job in a new tab to compare before saving again.");
+            History = await jobs.HistoryAsync(OwnerId, id);
+            return Page();
+        }
         return RedirectToPage("Index");
     }
 }

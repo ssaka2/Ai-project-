@@ -31,8 +31,8 @@ public class DraftModel(ResumeService resumes) : PageModel
         Draft = draft;
         if (!ModelState.IsValid) return Page();
         var result = await resumes.UpdateDraftAsync(Owner, id, Input);
-        if (result == DraftWriteResult.NotFound) return NotFound();
-        if (result == DraftWriteResult.Conflict)
+        if (result == WriteResult.NotFound) return NotFound();
+        if (result == WriteResult.Conflict)
         {
             Response.StatusCode = StatusCodes.Status409Conflict;
             ModelState.AddModelError("", "This draft changed in another session. Your submitted text is kept below. Open the latest saved draft in a new tab to compare before retrying.");

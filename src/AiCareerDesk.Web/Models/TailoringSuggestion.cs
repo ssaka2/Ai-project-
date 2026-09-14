@@ -14,4 +14,4 @@ public class TailoringSuggestion
     public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;
 }
 
-public enum DraftWriteResult { Saved, NotFound, Conflict }
+public enum WriteResult { Saved, NotFound, Conflict }

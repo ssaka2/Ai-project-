@@ -1,0 +1,73 @@
+name: ai-career-desk
+x-application: &application
+  image: ai-career-desk:local
+  platform: linux/amd64
+  build: .
+
+services:
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    platform: linux/amd64
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: Developer
+      MSSQL_SA_PASSWORD: ${SQL_PASSWORD:?Run scripts/setup.py or scripts/setup.ps1 first}
+    volumes:
+      - database:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q 'SELECT 1' >/dev/null 2>&1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 15s
+
+  mailpit:
+    image: axllent/mailpit:v1.27
+    ports:
+      - "127.0.0.1:${MAILPIT_PORT:-8025}:8025"
+
+  migrate:
+    <<: *application
+    entrypoint: ["/app/migrate"]
+    environment:
+      ConnectionStrings__DefaultConnection: "Server=db;Database=AiCareerDesk;User Id=sa;Password=${SQL_PASSWORD};Encrypt=true;TrustServerCertificate=true"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    <<: *application
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__DefaultConnection: "Server=db;Database=AiCareerDesk;User Id=sa;Password=${SQL_PASSWORD};Encrypt=true;TrustServerCertificate=true"
+      AllowedHosts: "localhost;127.0.0.1"
+      Identity__RequireConfirmedAccount: "true"
+      Email__Enabled: "true"
+      Email__Host: mailpit
+      Email__Port: "1025"
+      Email__Security: None
+      Email__FromAddress: "career@example.test"
+      DataProtection__KeyPath: /var/keys
+      AI__Enabled: ${AI_ENABLED:-false}
+      AI__Model: ${AI_MODEL:-}
+      AI__ApiKey: ${AI_API_KEY:-}
+    ports:
+      - "127.0.0.1:${WEB_PORT:-8080}:8080"
+    volumes:
+      - keys:/var/keys
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+      mailpit:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://localhost:8080/health/ready"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  database:
+  keys:

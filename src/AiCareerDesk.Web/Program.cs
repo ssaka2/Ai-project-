@@ -1,3 +1,7 @@
+using AiCareerDesk.Web.Services.Email;
+using Microsoft.AspNetCore.Identity.UI.Services;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.Extensions.Options;
 using AiCareerDesk.Web.Services.AI;
 using AiCareerDesk.Web.Data;
 using AiCareerDesk.Web.Services;
@@ -14,11 +18,22 @@ builder.Services.AddDbContext<ApplicationDbContext>((services, options) =>
 });
 builder.Services.AddDefaultIdentity<IdentityUser>(options =>
 {
-    // Development foundation: email delivery and confirmation are a release gate.
-    options.SignIn.RequireConfirmedAccount = false;
+    options.SignIn.RequireConfirmedAccount = builder.Configuration.GetValue("Identity:RequireConfirmedAccount", true);
+    options.Lockout.MaxFailedAccessAttempts = 5;
+    options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
     options.User.RequireUniqueEmail = true;
     options.Password.RequiredLength = 12;
 }).AddEntityFrameworkStores<ApplicationDbContext>();
+builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection("Email"));
+builder.Services.AddTransient<IEmailSender, SmtpEmailSender>();
+builder.Services.Configure<DataProtectionTokenProviderOptions>(options => options.TokenLifespan = TimeSpan.FromHours(1));
+var protection = builder.Services.AddDataProtection().SetApplicationName("AiCareerDesk");
+var keyPath = builder.Configuration["DataProtection:KeyPath"];
+if (!string.IsNullOrWhiteSpace(keyPath))
+{
+    Directory.CreateDirectory(keyPath);
+    protection.PersistKeysToFileSystem(new DirectoryInfo(keyPath));
+}
 builder.Services.AddScoped<JobService>();
 builder.Services.AddScoped<ResumeService>();
 builder.Services.Configure<AiOptions>(builder.Configuration.GetSection("AI"));
@@ -38,6 +53,12 @@ var app = builder.Build();
 // Validate after the host has applied all configuration sources.
 if (string.IsNullOrWhiteSpace(app.Configuration.GetConnectionString("DefaultConnection")))
     throw new InvalidOperationException("Set ConnectionStrings:DefaultConnection with user secrets or environment variables.");
+var email = app.Services.GetRequiredService<IOptions<EmailOptions>>().Value;
+if (app.Configuration.GetValue("Identity:RequireConfirmedAccount", true) && !email.IsConfigured)
+    throw new InvalidOperationException("Confirmed accounts require configured SMTP delivery. See docs/full-stack-setup.md.");
+if (email.Enabled && email.SocketOptions == MailKit.Security.SecureSocketOptions.None &&
+    !app.Environment.IsDevelopment() && !app.Environment.IsEnvironment("Testing"))
+    throw new InvalidOperationException("SMTP encryption is required outside development and tests.");
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error");
@@ -49,6 +70,16 @@ app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapRazorPages();
+app.MapGet("/health/live", () => Results.Ok(new { status = "ok" }));
+app.MapGet("/health/ready", async (ApplicationDbContext db, CancellationToken token) =>
+{
+    try
+    {
+        return await db.Database.CanConnectAsync(token) && !(await db.Database.GetPendingMigrationsAsync(token)).Any()
+            ? Results.Ok(new { status = "ready" }) : Results.StatusCode(503);
+    }
+    catch { return Results.StatusCode(503); }
+});
 
 app.Run();
 

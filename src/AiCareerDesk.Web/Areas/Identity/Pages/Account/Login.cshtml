@@ -1,0 +1,15 @@
+@page
+@model AiCareerDesk.Web.Areas.Identity.Pages.Account.LoginModel
+@{ Layout = "/Pages/Shared/_Layout.cshtml"; ViewData["Title"] = "Sign in"; }
+<h1>Sign in</h1>
+<form method="post" class="editor">
+    <input type="hidden" asp-for="ReturnUrl" />
+    <div asp-validation-summary="All" class="validation" role="alert"></div>
+    <label asp-for="Input.Email"></label><input asp-for="Input.Email" autocomplete="username" />
+    <label asp-for="Input.Password"></label><input asp-for="Input.Password" autocomplete="current-password" />
+    <label><input asp-for="Input.RememberMe" /> Remember me</label>
+    <button type="submit">Log in</button>
+</form>
+<p><a asp-page="./ForgotPassword">Forgot your password?</a></p>
+<p><a asp-page="./ResendEmailConfirmation">Resend confirmation email</a></p>
+<p><a asp-page="./Register">Create an account</a></p>
