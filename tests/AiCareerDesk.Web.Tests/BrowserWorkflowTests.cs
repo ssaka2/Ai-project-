@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Microsoft.Data.SqlClient;
 using System.Diagnostics;
 using System.Net;
@@ -150,7 +151,7 @@ public class BrowserWorkflowTests
         await page.GotoAsync("/Identity/Account/Register");
         await page.GetByLabel("Email", new() { Exact = true }).FillAsync(email);
         await page.GetByLabel("Password", new() { Exact = true }).FillAsync("Synthetic-Test-Password42!");
-        await page.GetByLabel("Confirm password", new() { Exact = true }).FillAsync("Synthetic-Test-Password42!");
+        await page.GetByLabel(new Regex("^Confirm password$", RegexOptions.IgnoreCase)).FillAsync("Synthetic-Test-Password42!");
         await page.GetByRole(AriaRole.Button, new() { Name = "Register", Exact = true }).ClickAsync();
         await Expect(page.GetByRole(AriaRole.Button, new() { Name = "Sign out", Exact = true })).ToBeVisibleAsync();
     }
