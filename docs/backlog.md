@@ -1,70 +1,73 @@
-# Next implementation tasks
+# Implementation backlog
 
-Tasks are ordered by dependency. These are drafted tasks, not published GitHub issues.
+These are drafted tasks, not published GitHub issues.
 
-## 1. Commit the initial EF Core migration (P0)
+## Completed in the draft branch
 
-Replace the development EnsureCreated bootstrap with migration-based initialization.
-Generate the migration and snapshot with dotnet-ef 10.0.12 against the current model.
-Review the SQL and apply to a fresh SQL Server test database.
-Update setup instructions and remove the development bootstrap switch.
+- ASP.NET Core accounts and private job CRUD.
+- Dashboard filters and counts.
+- Initial SQL Server migration and model snapshot.
+- SQL Server registration, ownership, persistence, and antiforgery workflow tests.
+- Transactional status-change history.
+- Base resumes, independent drafts, immutable source snapshots, and text downloads.
 
-Acceptance: a fresh database can be initialized using dotnet ef database update;
-rerunning applies no changes; Identity and job CRUD work against SQL Server.
-Existing disposable bootstrap databases must not be migrated in place.
+## 1. AI resume tailoring (P1)
 
-## 2. Add SQL Server and authenticated HTTP integration coverage (P0)
+Choose a provider and implement IResumeTailoringService plus a fake for tests.
+Use saved source snapshots to request a draft and a missing-skill summary.
+Keep credentials server-side. Treat pasted content as data, enforce length limits,
+rate-limit calls, support cancellation/timeouts, and avoid resume-content logging.
+Save generation/provider/model metadata separately from user edits.
 
-Exercise registration/sign-in with real antiforgery tokens and cookies.
-Use two users and verify cross-account GET, edit POST, and delete POST fail.
-Check database persistence after application restart.
+Acceptance: generation never silently overwrites user edits; reviewed examples
+do not fabricate qualifications; provider failures preserve drafts; tracking
+remains usable without an AI key. Fake-provider tests run without paid calls.
 
-Acceptance: a CI SQL Server job proves these behaviors, including attempted
-OwnerId overposting. No test credentials become application defaults.
+## 2. Email confirmation and recovery (P0 before public hosting)
 
-## 3. Add application status history (P1)
+Configure email delivery, RequireConfirmedAccount, confirmation links,
+password reset, failed-login lockout behavior, and account deletion.
+Decide and document snapshot retention on account deletion.
 
-Record old/new status and UTC timestamp in the same transaction as the job update.
-Render the history on the job page. Define applied-date behavior on repeated transitions.
+Acceptance: a new user confirms email, logs in, resets a password, and deletes
+their account and associated records. Expired/reused tokens fail.
 
-Acceptance: a changed status creates exactly one event, unchanged status creates none,
-and another user cannot read the history.
+## 3. Concurrent edit protection (P1 before multiple active users)
 
-## 4. Store base resumes and draft snapshots (P1)
+Add concurrency tokens to job, resume, and draft edits. Return a conflict screen
+that preserves the submitted text and lets the user compare current content.
 
-Add owner-scoped resume CRUD for pasted text. Add TailoredResume with an immutable
-source resume snapshot, job-description snapshot, and editable generated text.
+Acceptance: two browser sessions cannot silently overwrite each other's changes.
 
-Acceptance: editing a draft never changes its base resume; deleting or editing source
-records does not destroy the evidence used for an existing draft.
+## 4. Browser and accessibility review (P0 before release)
 
-## 5. Implement resume tailoring (P1; depends on 4)
+Check registration, validation messages, job filtering/history, resume editing,
+snapshot expansion, downloads, and deletion on mobile and desktop.
+Verify keyboard navigation, focus, labels, contrast, and screen-reader errors.
 
-Select an AI provider and implement IResumeTailoringService plus a fake for tests.
-Return draft text and missing-skill observations. Keep credentials server-side.
-Treat pasted content as data; restrict input/output lengths, rate-limit requests,
-handle cancellation/timeouts, and do not log resume bodies.
+Acceptance: the complete workflow can be performed by keyboard at narrow widths.
+Document tested browsers and any remaining limitations.
 
-Acceptance: no fabricated qualifications in reviewed examples; errors preserve
-existing drafts; the core dashboard works without provider credentials.
+## 5. Deployment and operations (P0 before public hosting)
 
-## 6. Prepare hosting and account recovery (P0 before public release)
+Choose hosting; configure production SQL Server, HTTPS, AllowedHosts, persistent
+Data Protection keys, secret storage, reviewed migration deployment, and backups.
+Define rollback and restore procedures. Do not use startup schema creation.
 
-Configure email delivery, confirmed accounts, password recovery, AllowedHosts,
-HTTPS, persistent Data Protection keys, secrets, backups, and deployment migrations.
+Acceptance: two accounts complete the workflow after a deployment restart;
+a database restore is demonstrated in a non-production environment.
 
-Acceptance: a new user can confirm their email, sign in, reset a password, and retain
-access after a deployment restart. A documented rollback exists.
+## Later
 
-## Manual smoke test for this branch
+Google sign-in; job feeds; PDF/DOCX import/export; reminders; application automation
+where supported. AI generation and automatic application submission are separate features.
 
-1. Use a fresh disposable SQL Server database and follow the README.
-2. Register Alice and Bob with synthetic addresses and strong passwords.
-3. Alice saves a job and notes, then changes Saved to Applied.
-4. Restart the app and verify Alice's job persists.
-5. Bob sees an empty dashboard. Alice's edit/delete URLs return 404 for Bob.
-6. Invalid URLs such as javascript:alert(1) are rejected.
-7. Delete uses a confirmation page and requires a POST.
-8. Verify sign-out and mobile-width page layout.
+## Manual review checklist
 
-AI and resume acceptance tests are added when those features exist.
+1. Follow README setup against a fresh SQL Server database.
+2. Register two synthetic accounts and save distinct jobs/resumes.
+3. Update job statuses and inspect their timestamps.
+4. Create, edit, and download a draft; verify the base resume is unchanged.
+5. Edit/delete the source records; verify the draft snapshots remain.
+6. Try another account's direct URLs and verify access is denied.
+7. Check validation, keyboard use, narrow layouts, and deletion confirmation.
