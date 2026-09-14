@@ -17,18 +17,8 @@ jobs:
           dotnet-version: "10.0.x"
       - run: dotnet restore AiCareerDesk.slnx
       - run: dotnet tool restore
-      - name: Generate edit-concurrency migration for review
-        env:
-          ConnectionStrings__DefaultConnection: "Server=localhost;Database=SchemaDesignOnly;Integrated Security=true;TrustServerCertificate=true"
-        run: dotnet ef migrations add ProtectRecordEdits --project src/AiCareerDesk.Web --output-dir Data/Migrations
-      - name: Export generated schema for review
-        shell: python
-        run: |
-          import json
-          from pathlib import Path
-          for path in Path("src/AiCareerDesk.Web/Data/Migrations").glob("*.cs"):
-              if "ProtectRecordEdits" in path.name or "ModelSnapshot" in path.name:
-                  print("SCHEMA_REVIEW_JSON:" + json.dumps({"path": str(path), "content": path.read_text()}))
+      - name: Verify committed migrations match the model
+        run: dotnet ef migrations has-pending-model-changes --project src/AiCareerDesk.Web
       - run: dotnet build AiCareerDesk.slnx --configuration Release --no-restore
       - name: Install Chromium for browser verification
         run: pwsh tests/AiCareerDesk.Web.Tests/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
@@ -73,7 +63,7 @@ jobs:
       - name: Start local SMTP inbox
         run: |
           docker run -d --name career-mailpit -p 127.0.0.1:1025:1025 -p 127.0.0.1:8025:8025 axllent/mailpit:v1.27
-          curl --retry 20 --retry-connrefused --retry-delay 1 --fail --silent http://127.0.0.1:8025/api/v1/messages > /dev/null
+          curl --retry 20 --retry-all-errors --retry-delay 1 --fail --silent http://127.0.0.1:8025/api/v1/messages > /dev/null
       - name: Run service, SQL Server, and browser verification
         env:
           RUN_BROWSER_TESTS: "true"

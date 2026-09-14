@@ -306,4 +306,70 @@ public class SqlServerWorkflowTests
         });
         Assert.Contains("Too many failed attempts", await locked.Content.ReadAsStringAsync());
     }
+
+    [SqlServerFact]
+    public async Task JobAndResumeConflictsPreserveSavedDataAndAccountDeletionCascades()
+    {
+        await using var factory = Factory();
+        using var client = Client(factory);
+        using (var scope = factory.Services.CreateScope())
+            await scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Database.MigrateAsync();
+        var email = "lifecycle-" + Guid.NewGuid().ToString("N") + "@example.test";
+        await Register(client, email);
+        Guid jobId; Guid resumeId; Guid draftId; Guid jobVersion; Guid resumeVersion; string owner;
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            owner = (await db.Users.SingleAsync(x => x.Email == email)).Id;
+            jobId = await new JobService(db).CreateAsync(owner, new JobInput { Title = "Original", Company = "Example" });
+            resumeId = await new ResumeService(db).CreateAsync(owner, new ResumeInput { Name = "Base", Content = "Original" });
+            draftId = (await new ResumeService(db).CreateDraftAsync(owner, resumeId, jobId))!.Value;
+            jobVersion = (await db.Jobs.SingleAsync(x => x.Id == jobId)).Version;
+            resumeVersion = (await db.Resumes.SingleAsync(x => x.Id == resumeId)).Version;
+        }
+        Assert.Equal(HttpStatusCode.Redirect, (await Post(client, "/Jobs/Edit/" + jobId, new()
+        {
+            ["Input.Title"] = "Saved", ["Input.Company"] = "Example",
+            ["Input.Status"] = "1", ["Input.Version"] = jobVersion.ToString()
+        })).StatusCode);
+        var jobConflict = await Post(client, "/Jobs/Edit/" + jobId, new()
+        {
+            ["Input.Title"] = "Stale job", ["Input.Company"] = "Example",
+            ["Input.Status"] = "2", ["Input.Version"] = jobVersion.ToString()
+        });
+        Assert.Equal(HttpStatusCode.Conflict, jobConflict.StatusCode);
+        Assert.Contains("Stale job", await jobConflict.Content.ReadAsStringAsync());
+        Assert.Equal(HttpStatusCode.Redirect, (await Post(client, "/Resumes/Edit/" + resumeId, new()
+        {
+            ["Input.Name"] = "Base", ["Input.Content"] = "Saved resume",
+            ["Input.Version"] = resumeVersion.ToString()
+        })).StatusCode);
+        var resumeConflict = await Post(client, "/Resumes/Edit/" + resumeId, new()
+        {
+            ["Input.Name"] = "Base", ["Input.Content"] = "Stale resume",
+            ["Input.Version"] = resumeVersion.ToString()
+        });
+        Assert.Equal(HttpStatusCode.Conflict, resumeConflict.StatusCode);
+        Assert.Contains("Stale resume", await resumeConflict.Content.ReadAsStringAsync());
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            Assert.Equal("Saved", (await db.Jobs.SingleAsync(x => x.Id == jobId)).Title);
+            Assert.Single(await db.StatusHistory.Where(x => x.JobApplicationId == jobId).ToListAsync());
+            Assert.Equal("Saved resume", (await db.Resumes.SingleAsync(x => x.Id == resumeId)).Content);
+        }
+        var deleted = await Post(client, "/Identity/Account/Manage/DeletePersonalData",
+            new() { ["Input.Password"] = "Synthetic-Test-Password42!" });
+        Assert.Equal(HttpStatusCode.Redirect, deleted.StatusCode);
+        Assert.Equal(HttpStatusCode.Redirect, (await client.GetAsync("/Jobs")).StatusCode);
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            Assert.False(await db.Users.AnyAsync(x => x.Id == owner));
+            Assert.False(await db.Jobs.AnyAsync(x => x.Id == jobId));
+            Assert.False(await db.Resumes.AnyAsync(x => x.Id == resumeId));
+            Assert.False(await db.ResumeDrafts.AnyAsync(x => x.Id == draftId));
+            Assert.False(await db.StatusHistory.AnyAsync(x => x.JobApplicationId == jobId));
+        }
+    }
 }

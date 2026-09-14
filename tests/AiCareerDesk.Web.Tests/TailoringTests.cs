@@ -165,4 +165,29 @@ public class TailoringTests
             new DraftInput { Version = oldVersion, Content = "Second writer" }));
         Assert.Equal("First writer", (await new ResumeService(f.Db).GetDraftAsync("alice", f.DraftId))!.Content);
     }
+
+    [Fact]
+    public async Task DatabaseConflictsPreserveJobsResumesAndAtomicStatusHistory()
+    {
+        await using var f = new Fixture(); await f.StartAsync();
+        await using var first = f.NewContext();
+        await using var second = f.NewContext();
+        var jobA = await first.Jobs.SingleAsync();
+        var jobB = await second.Jobs.SingleAsync();
+        var resumeA = await first.Resumes.SingleAsync();
+        var resumeB = await second.Resumes.SingleAsync();
+        Assert.Equal(WriteResult.Saved, await new JobService(first).UpdateAsync("alice", jobA.Id,
+            new JobInput { Title = "First", Company = "Example", Status = ApplicationStatus.Applied, Version = jobA.Version }));
+        Assert.Equal(WriteResult.Conflict, await new JobService(second).UpdateAsync("alice", jobB.Id,
+            new JobInput { Title = "Stale", Company = "Example", Status = ApplicationStatus.Offer, Version = jobB.Version }));
+        Assert.Equal(WriteResult.Saved, await new ResumeService(first).UpdateAsync("alice", resumeA.Id,
+            new ResumeInput { Name = "Base", Content = "First resume", Version = resumeA.Version }));
+        Assert.Equal(WriteResult.Conflict, await new ResumeService(second).UpdateAsync("alice", resumeB.Id,
+            new ResumeInput { Name = "Base", Content = "Stale resume", Version = resumeB.Version }));
+        // A subsequent save must not leak the rejected writer's status-history entry.
+        await second.SaveChangesAsync();
+        Assert.Equal("First", (await new JobService(f.Db).GetAsync("alice", jobA.Id))!.Title);
+        Assert.Equal(ApplicationStatus.Applied, Assert.Single(await new JobService(f.Db).HistoryAsync("alice", jobA.Id)).ToStatus);
+        Assert.Equal("First resume", (await new ResumeService(f.Db).GetAsync("alice", resumeA.Id))!.Content);
+    }
 }

@@ -18,10 +18,14 @@ direction follows the owner's earlier requests.
 4. Optional AI: OpenAI adapter, separate suggestions, gap summaries, consent, limits,
    timeouts, review/apply flow, and draft conflict detection.
 
-## Remaining v0.1 milestones
+5. Account lifecycle: email confirmation/recovery, failed-login lockout, deletion.
+6. Full-stack local packaging: SQL Server, SMTP inbox, migration bundle, persisted keys.
+7. Conflict protection for jobs and base resumes; automated Chromium workflows.
 
-5. Live AI evaluation after provider configuration.
-6. Release: email confirmation/recovery, deployment, browser/accessibility review.
+## Remaining v0.1 release milestones
+
+8. Live AI evaluation after provider configuration.
+9. Manual accessibility/additional-browser review and public production deployment.
 
 ## Acceptance criteria
 
@@ -38,7 +42,7 @@ direction follows the owner's earlier requests.
 - AI failures preserve records; ordinary tracking works without AI credentials.
 
 Automated coverage includes these implemented behaviors against SQLite and/or SQL
-Server. Visual browser usability is still a release check.
+Server. Automated Chromium desktop/mobile workflows run in CI; manual accessibility and additional-browser review remain release checks.
 
 ## Data design
 

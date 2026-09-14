@@ -1,141 +1,111 @@
 # AI Career Desk
 
-A C# / ASP.NET Core application for organizing IT job applications and preparing
-job-specific resume drafts.
+A full-stack C# / ASP.NET Core application for organizing IT job applications
+and preparing job-specific resume drafts.
 
-## Current features
+## What you can do
 
-- Email/password registration and sign-in with ASP.NET Core Identity.
-- Private job records with descriptions, employer links, notes, and status filters.
-- Dashboard counts and timestamped status-change history.
-- Base resumes saved as plain text.
-- Separate editable drafts for individual jobs.
-- Immutable source-resume and job-description snapshots in each draft.
-- Download saved drafts as UTF-8 text.
-- Optional AI suggestions and skill-gap summaries, reviewed before applying.
-- Protection against stale draft edits and suggestion acceptance.
-- SQL Server schema migrations and automated tests.
+- Register, confirm email, sign in, recover a password, and delete your account.
+- Keep private job records with descriptions, links, notes, and status filters.
+- Track dashboard counts and timestamped status changes.
+- Save base resumes, create independent job-specific drafts, and download text.
+- Preserve original resume/job snapshots even after editing or deleting sources.
+- Optionally generate AI suggestions and skill gaps, then review before applying.
+- Receive a conflict message when another session has changed the record.
 
-Drafts start as a copy of your base resume. Optional AI suggestions use the OpenAI
-Responses API and stay separate until you choose to apply them. AI is disabled
-by default and requires server-side configuration; see [AI setup](docs/ai-setup.md).
+AI is disabled by default. Core tracking and editing work without an API key.
 The app does not import job feeds or submit applications.
 
-Development preview, not a deployed public release. Email confirmation/recovery,
-live AI evaluation, and production hosting remain release gates.
+## Start the full stack
 
-## Workflow
-
-Register → save a job → save a base resume → create a draft for that job →
-edit and download the draft → optionally review and apply AI suggestions → apply on the employer's website → update status.
-
-Choose Applied only after submitting the application yourself.
-Statuses: Saved, Applied, Interviewing, Offer, Rejected, Withdrawn.
-Each actual status change records its old/new value and UTC time. Saving without
-changing status creates no history entry. Repeated transitions are retained;
-there is no separate application-date field yet.
-
-Draft snapshots survive later editing or deletion of their source job/resume.
-Deleting a draft removes the draft and its snapshots. Deleting a job removes
-that job's status history.
-
-## Technology
-
-.NET 10, Razor Pages, ASP.NET Core Identity, Entity Framework Core, SQL Server,
-xUnit, and GitHub Actions. AI credentials are required only for generation.
-
-## Run locally
-
-Install the .NET 10 SDK and provide a reachable SQL Server instance.
-Windows developers may use SQL Server LocalDB. LocalDB is Windows-only.
+Install Docker with Compose v2 and Linux container support.
 
 ```sh
 git clone https://github.com/ssaka2/Ai-project-.git
 cd Ai-project-
 git checkout codex/ai-resume-tailoring
+python3 scripts/setup.py
+docker compose up --build -d --wait web
+```
+
+On Windows, replace the Python command with
+`powershell -File scripts/setup.ps1`.
+
+Open http://localhost:8080. Register with a test address, then open the
+confirmation email in the local inbox at http://localhost:8025.
+Sign in → save a job → save a base resume → create, edit, and download a draft.
+
+SQL Server, the web app, migrations, and a local SMTP inbox run together.
+Database data and application keys persist across restarts.
+See [full setup and production configuration](docs/full-stack-setup.md)
+for .NET SDK development, ports, updates, and account behavior.
+
+This is a runnable development version. Public hosting and live AI evaluation
+remain release work.
+
+## Workflow details
+
+Choose Applied only after submitting the application yourself.
+Statuses: Saved, Applied, Interviewing, Offer, Rejected, Withdrawn.
+Actual status changes record their old/new value and UTC time in the same database
+transaction. Saving without a status change adds no event.
+
+Drafts start as copies of base resumes. AI suggestions remain separate until
+accepted. Jobs, base resumes, drafts, and AI acceptance detect stale edits and
+preserve submitted text for comparison. Open the latest record and transfer the
+edits you want to keep after a conflict.
+
+Deleting a source job or resume preserves existing draft snapshots.
+Deleting a draft removes its snapshots and suggestions.
+Deleting an account removes its associated records.
+
+## Technology and structure
+
+.NET 10, Razor Pages, Identity, EF Core, SQL Server, MailKit, xUnit,
+Playwright, Docker Compose, and GitHub Actions.
+
+| Path | Responsibility |
+| --- | --- |
+| src/AiCareerDesk.Web/Pages | Dashboard, jobs, resumes, drafts, review UI |
+| src/AiCareerDesk.Web/Areas/Identity | Account pages and sign-in behavior |
+| src/AiCareerDesk.Web/Models | Entities and validated inputs |
+| src/AiCareerDesk.Web/Data | DbContext, design-time factory, migrations |
+| src/AiCareerDesk.Web/Services | Owner-scoped operations, AI, SMTP |
+| tests/AiCareerDesk.Web.Tests | Service, SQL Server, HTTP, Chromium tests |
+| Dockerfile, compose.yaml | Local full-stack deployment |
+| scripts | Local configuration setup |
+| docs | Scope, setup, backlog, verification |
+| .github/workflows | Build, audit, test, deployment checks |
+
+## Verification
+
+```sh
 dotnet restore AiCareerDesk.slnx
 dotnet tool restore
-```
-
-For Windows LocalDB, configure a new database:
-
-```sh
-dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Server=(localdb)\\mssqllocaldb;Database=AiCareerDeskV1;Trusted_Connection=True;MultipleActiveResultSets=true" --project src/AiCareerDesk.Web
-dotnet ef database update --project src/AiCareerDesk.Web
-dotnet dev-certs https --trust
-dotnet run --project src/AiCareerDesk.Web --launch-profile https
-```
-
-For other SQL Server installations, supply your own development connection string
-through user secrets. Open https://localhost:7043 and register.
-
-Schema changes are applied explicitly with dotnet ef database update, never at
-application startup. The repository pins dotnet-ef through its local tool manifest.
-
-### Upgrading the earlier foundation
-
-The earlier draft used EnsureCreated with a disposable database. That switch
-has been removed. Use a **new database name** for this migration-based version.
-Do not run the initial migration against the old bootstrap database. If you
-saved anything worth keeping, preserve that database and export the needed data
-before planning a migration. No automatic deletion or conversion is performed.
-
-## Tests
-
-```sh
 dotnet build AiCareerDesk.slnx --configuration Release
 dotnet test AiCareerDesk.slnx --configuration Release
 dotnet ef migrations has-pending-model-changes --project src/AiCareerDesk.Web
 ```
 
-The last command requires the development connection-string configuration.
-Most tests run without SQL Server. The SQL Server workflow test is explicitly
-skipped unless TEST_SQL_CONNECTION points to a disposable test database.
+SQL tests require TEST_SQL_CONNECTION pointing to a disposable SQL Server database.
+Browser tests additionally require RUN_BROWSER_TESTS=true, Chromium installed
+with the built test project's playwright.ps1 script, and Mailpit on ports
+1025/8025. These tests are explicitly skipped when their prerequisites are absent.
 
-In CI, an isolated SQL Server Developer container is started with a generated
-temporary password. Tests apply and reapply migrations, register two accounts,
-check real cookies/antiforgery, reject cross-account reads/writes/downloads,
-verify source snapshots, and restart the application host to check persistence. Fake-provider tests cover AI
-consent, separate suggestions, failure handling, and stale-edit rejection without paid calls.
-The workflow discards its container after the run.
+CI provisions these dependencies, runs all tests, checks package advisories and
+committed migrations, then builds and restarts the Docker stack.
+See [verification results and limits](docs/verification.md).
+Only use synthetic test data in disposable databases.
 
-Do not point TEST_SQL_CONNECTION at a production or personal database.
-Test registration uses synthetic example.test accounts.
+## Remaining milestones
 
-## Layout
+1. Configure and evaluate the [optional AI provider](docs/ai-setup.md).
+2. Complete manual keyboard/screen-reader and additional-browser review.
+3. Deploy with production HTTPS/SMTP/SQL, protected persistent keys, and tested backups.
 
-| Path | Responsibility |
-| --- | --- |
-| src/AiCareerDesk.Web/Pages/Jobs | Job CRUD, dashboard, history |
-| src/AiCareerDesk.Web/Pages/Resumes | Base resumes, drafts, snapshots, downloads |
-| src/AiCareerDesk.Web/Models | Entities and validated edit inputs |
-| src/AiCareerDesk.Web/Data/Migrations | Reviewed schema migration and model snapshot |
-| src/AiCareerDesk.Web/Services | Owner-scoped job and resume operations |
-| tests/AiCareerDesk.Web.Tests | Relational service and HTTP workflow tests |
-| docs | MVP scope, backlog, and verification notes |
-| .github/workflows | Build and database test automation |
-
-## Next milestones
-
-See [MVP scope](docs/mvp.md) and [ordered tasks](docs/backlog.md).
-
-1. Configure an AI model and evaluate output on synthetic resumes.
-2. Confirmed email, password recovery, and account lifecycle checks.
-3. Browser/accessibility review, deployment, backups, and production configuration.
-
-AI drafts must preserve supplied qualifications and flag missing skills without
-inventing employment, credentials, or achievements.
-
-Google sign-in, external job feeds, PDF/DOCX import/export, reminders, and automatic
-applications remain later work.
-
-## Production readiness
-
-Configure email delivery/confirmation, AllowedHosts, HTTPS, persistent Data
-Protection keys, migration deployment, backups, and secret storage before hosting.
-Email confirmation is disabled in this development preview.
-Draft edits and AI acceptance detect conflicts. Jobs and base resumes still use last-write-wins.
-Do not commit real resumes, credentials, or database exports or log resume bodies.
+See [MVP scope](docs/mvp.md) and [implementation tasks](docs/backlog.md).
+Google sign-in, feeds, PDF/DOCX processing, reminders, and automatic applications
+are outside this version.
 
 ## License
 
