@@ -18,6 +18,11 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
+        // Keep the Identity schema identical with or without the web host's store options.
+        builder.Entity<IdentityUserLogin<string>>().Property(x => x.LoginProvider).HasMaxLength(128);
+        builder.Entity<IdentityUserLogin<string>>().Property(x => x.ProviderKey).HasMaxLength(128);
+        builder.Entity<IdentityUserToken<string>>().Property(x => x.LoginProvider).HasMaxLength(128);
+        builder.Entity<IdentityUserToken<string>>().Property(x => x.Name).HasMaxLength(128);
         builder.Entity<TailoringSuggestion>().HasOne<ResumeDraft>().WithMany()
             .HasForeignKey(x => x.ResumeDraftId).OnDelete(DeleteBehavior.Cascade);
         builder.Entity<TailoringSuggestion>().HasIndex(x => new { x.ResumeDraftId, x.CreatedUtc });
