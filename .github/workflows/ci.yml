@@ -1,0 +1,48 @@
+name: Build and test
+on:
+  push:
+    branches: [main, "codex/**"]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - run: dotnet restore AiCareerDesk.slnx
+      - run: dotnet tool restore
+      - name: Verify committed migrations match the model
+        env:
+          ConnectionStrings__DefaultConnection: "Server=localhost;Database=SchemaDesignOnly;Integrated Security=true;TrustServerCertificate=true"
+        run: dotnet ef migrations has-pending-model-changes --project src/AiCareerDesk.Web
+      - run: dotnet build AiCareerDesk.slnx --configuration Release --no-restore
+      - name: Start disposable SQL Server
+        shell: bash
+        run: |
+          sql_test_password="$(openssl rand -hex 24)Aa1!"
+          echo "::add-mask::$sql_test_password"
+          docker run -d --name career-sql -e ACCEPT_EULA=Y -e MSSQL_PID=Developer -e MSSQL_SA_PASSWORD="$sql_test_password" -p 127.0.0.1:1433:1433 mcr.microsoft.com/mssql/server:2022-latest
+          echo "TEST_SQL_CONNECTION=Server=localhost,1433;Database=AiCareerDeskTests;User Id=sa;Password=$sql_test_password;Encrypt=true;TrustServerCertificate=true" >> "$GITHUB_ENV"
+          for attempt in {1..60}; do
+            if docker exec career-sql /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$sql_test_password" -C -Q "SELECT 1" >/dev/null 2>&1; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "SQL Server did not become ready."
+          exit 1
+      - run: dotnet test AiCareerDesk.slnx --configuration Release --no-build --logger trx --results-directory TestResults
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: TestResults
+      - name: Stop disposable database
+        if: always()
+        run: docker rm -f career-sql || true

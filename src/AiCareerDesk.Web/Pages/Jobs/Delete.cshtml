@@ -1,0 +1,9 @@
+@page "{id:guid}"
+@model AiCareerDesk.Web.Pages.Jobs.DeleteModel
+@{ ViewData["Title"] = "Delete job"; }
+<h1>Delete this job?</h1>
+<p>@Model.Job.Title at @Model.Job.Company and its notes will be permanently removed.</p>
+<form method="post">
+    <button type="submit">Delete job</button>
+    <a asp-page="Edit" asp-route-id="@Model.Job.Id">Keep job</a>
+</form>

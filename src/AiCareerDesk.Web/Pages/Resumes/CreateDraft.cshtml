@@ -1,0 +1,21 @@
+@page
+@model AiCareerDesk.Web.Pages.Resumes.CreateDraftModel
+@{ ViewData["Title"] = "Create a draft"; }
+<h1>Create a job-specific draft</h1>
+<p>Start with a copy of your resume and edit it for this opportunity. AI generation is not available yet.</p>
+@if (Model.ResumeOptions.Count == 0 || Model.JobOptions.Count == 0)
+{
+    <p>You need a saved resume and a saved job first.</p>
+    <a asp-page="Edit">Add a resume</a><span> · </span><a asp-page="/Jobs/Create">Save a job</a>
+}
+else
+{
+    <form method="post" class="editor">
+        <div asp-validation-summary="All" class="validation" role="alert"></div>
+        <label asp-for="ResumeId">Base resume</label>
+        <select asp-for="ResumeId" asp-items="Model.ResumeOptions"><option value="">Choose a resume</option></select>
+        <label asp-for="JobId">Job</label>
+        <select asp-for="JobId" asp-items="Model.JobOptions"><option value="">Choose a job</option></select>
+        <button type="submit">Create editable draft</button>
+    </form>
+}

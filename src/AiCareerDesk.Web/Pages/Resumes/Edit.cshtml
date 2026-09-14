@@ -1,0 +1,14 @@
+@page "{id:guid?}"
+@model AiCareerDesk.Web.Pages.Resumes.EditModel
+@{ ViewData["Title"] = "Base resume"; }
+<h1>Base resume</h1>
+<form method="post" class="editor">
+    <div asp-validation-summary="All" class="validation" role="alert"></div>
+    <label asp-for="Input.Name">Resume name</label><input asp-for="Input.Name" />
+    <label asp-for="Input.Content">Resume text</label><textarea asp-for="Input.Content" rows="22"></textarea>
+    <button type="submit">Save resume</button><a asp-page="Index">Back to resumes</a>
+</form>
+@if (RouteData.Values["id"] is not null)
+{
+    <a asp-page="Delete" asp-route-id="@RouteData.Values["id"]">Delete resume</a>
+}

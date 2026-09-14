@@ -1,0 +1,9 @@
+@page "{id:guid}"
+@model AiCareerDesk.Web.Pages.Resumes.DeleteModel
+@{ ViewData["Title"] = "Delete resume"; }
+<h1>Delete @Model.Name?</h1>
+<p>This record will be permanently removed. Other drafts and their source snapshots are kept.</p>
+<form method="post">
+    <input type="hidden" asp-for="Draft" />
+    <button type="submit">Delete</button><a asp-page="Index">Keep it</a>
+</form>
