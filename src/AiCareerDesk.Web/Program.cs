@@ -4,9 +4,13 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-    ?? throw new InvalidOperationException("Set ConnectionStrings:DefaultConnection with user secrets or environment variables.");
-builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseSqlServer(connectionString));
+builder.Services.AddDbContext<ApplicationDbContext>((services, options) =>
+{
+    var connectionString = services.GetRequiredService<IConfiguration>()
+        .GetConnectionString("DefaultConnection")
+        ?? throw new InvalidOperationException("Set ConnectionStrings:DefaultConnection with user secrets or environment variables.");
+    options.UseSqlServer(connectionString);
+});
 builder.Services.AddDefaultIdentity<IdentityUser>(options =>
 {
     // Development foundation: email delivery and confirmation are a release gate.
@@ -18,6 +22,9 @@ builder.Services.AddScoped<JobService>();
 builder.Services.AddRazorPages(options => options.Conventions.AuthorizeFolder("/Jobs"));
 
 var app = builder.Build();
+// Validate after the host has applied all configuration sources.
+if (string.IsNullOrWhiteSpace(app.Configuration.GetConnectionString("DefaultConnection")))
+    throw new InvalidOperationException("Set ConnectionStrings:DefaultConnection with user secrets or environment variables.");
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error");
