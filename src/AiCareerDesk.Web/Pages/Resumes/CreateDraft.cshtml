@@ -2,7 +2,7 @@
 @model AiCareerDesk.Web.Pages.Resumes.CreateDraftModel
 @{ ViewData["Title"] = "Create a draft"; }
 <h1>Create a job-specific draft</h1>
-<p>Start with a copy of your resume and edit it for this opportunity. AI generation is not available yet.</p>
+<p>Start with a copy of your resume and edit it for this opportunity. You can request AI suggestions from the draft when tailoring is enabled.</p>
 @if (Model.ResumeOptions.Count == 0 || Model.JobOptions.Count == 0)
 {
     <p>You need a saved resume and a saved job first.</p>

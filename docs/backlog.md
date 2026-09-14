@@ -10,18 +10,20 @@ These are drafted tasks, not published GitHub issues.
 - SQL Server registration, ownership, persistence, and antiforgery workflow tests.
 - Transactional status-change history.
 - Base resumes, independent drafts, immutable source snapshots, and text downloads.
+- Optional AI suggestions with separate storage, source consent, gap summaries, and review/apply.
+- Bounded responses, timeouts, cancellation, per-user and concurrency limits.
+- Optimistic concurrency for manual draft saves and AI acceptance.
 
-## 1. AI resume tailoring (P1)
+## 1. Configure and evaluate live AI (P1)
 
-Choose a provider and implement IResumeTailoringService plus a fake for tests.
-Use saved source snapshots to request a draft and a missing-skill summary.
-Keep credentials server-side. Treat pasted content as data, enforce length limits,
-rate-limit calls, support cancellation/timeouts, and avoid resume-content logging.
-Save generation/provider/model metadata separately from user edits.
+The OpenAI adapter is implemented and disabled by default. Configure a supported
+model and server-side key using ai-setup.md. Run a small synthetic evaluation:
+ordinary resume, missing qualification, irrelevant job, prompt injection in source
+text, and long input. Review every generated claim against its source.
 
-Acceptance: generation never silently overwrites user edits; reviewed examples
-do not fabricate qualifications; provider failures preserve drafts; tracking
-remains usable without an AI key. Fake-provider tests run without paid calls.
+Acceptance: account/model compatibility and representative output quality are
+documented. No fabricated qualifications in reviewed examples. Do not interpret
+fake-provider tests as proof of model factuality.
 
 ## 2. Email confirmation and recovery (P0 before public hosting)
 
@@ -34,7 +36,8 @@ their account and associated records. Expired/reused tokens fail.
 
 ## 3. Concurrent edit protection (P1 before multiple active users)
 
-Add concurrency tokens to job, resume, and draft edits. Return a conflict screen
+Draft edits and AI acceptance now have concurrency tokens. Extend protection to
+job and base-resume edits. Return a conflict screen
 that preserves the submitted text and lets the user compare current content.
 
 Acceptance: two browser sessions cannot silently overwrite each other's changes.
@@ -60,7 +63,7 @@ a database restore is demonstrated in a non-production environment.
 ## Later
 
 Google sign-in; job feeds; PDF/DOCX import/export; reminders; application automation
-where supported. AI generation and automatic application submission are separate features.
+where supported. AI suggestions and automatic application submission are separate features.
 
 ## Manual review checklist
 

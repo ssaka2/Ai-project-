@@ -41,6 +41,7 @@ public class PageTests
     [InlineData("/Resumes")]
     [InlineData("/Resumes/Edit")]
     [InlineData("/Resumes/CreateDraft")]
+    [InlineData("/Resumes/Tailor/00000000-0000-0000-0000-000000000001")]
     [InlineData("/Resumes/Draft/00000000-0000-0000-0000-000000000001")]
     [InlineData("/Resumes/Delete/00000000-0000-0000-0000-000000000001")]
     [InlineData("/Jobs/Edit/00000000-0000-0000-0000-000000000001")]

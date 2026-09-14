@@ -12,18 +12,22 @@ job-specific resume drafts.
 - Separate editable drafts for individual jobs.
 - Immutable source-resume and job-description snapshots in each draft.
 - Download saved drafts as UTF-8 text.
+- Optional AI suggestions and skill-gap summaries, reviewed before applying.
+- Protection against stale draft edits and suggestion acceptance.
 - SQL Server schema migrations and automated tests.
 
-Drafts currently start as a copy of your base resume. **AI generation is not
-implemented yet.** The app does not import job feeds or submit applications.
+Drafts start as a copy of your base resume. Optional AI suggestions use the OpenAI
+Responses API and stay separate until you choose to apply them. AI is disabled
+by default and requires server-side configuration; see [AI setup](docs/ai-setup.md).
+The app does not import job feeds or submit applications.
 
 Development preview, not a deployed public release. Email confirmation/recovery,
-AI integration, and production hosting remain release gates.
+live AI evaluation, and production hosting remain release gates.
 
 ## Workflow
 
 Register → save a job → save a base resume → create a draft for that job →
-edit and download the draft → apply on the employer's website → update status.
+edit and download the draft → optionally review and apply AI suggestions → apply on the employer's website → update status.
 
 Choose Applied only after submitting the application yourself.
 Statuses: Saved, Applied, Interviewing, Offer, Rejected, Withdrawn.
@@ -38,7 +42,7 @@ that job's status history.
 ## Technology
 
 .NET 10, Razor Pages, ASP.NET Core Identity, Entity Framework Core, SQL Server,
-xUnit, and GitHub Actions. AI credentials are not required for current features.
+xUnit, and GitHub Actions. AI credentials are required only for generation.
 
 ## Run locally
 
@@ -48,7 +52,7 @@ Windows developers may use SQL Server LocalDB. LocalDB is Windows-only.
 ```sh
 git clone https://github.com/ssaka2/Ai-project-.git
 cd Ai-project-
-git checkout codex/career-desk-foundation
+git checkout codex/ai-resume-tailoring
 dotnet restore AiCareerDesk.slnx
 dotnet tool restore
 ```
@@ -91,7 +95,8 @@ skipped unless TEST_SQL_CONNECTION points to a disposable test database.
 In CI, an isolated SQL Server Developer container is started with a generated
 temporary password. Tests apply and reapply migrations, register two accounts,
 check real cookies/antiforgery, reject cross-account reads/writes/downloads,
-verify source snapshots, and restart the application host to check persistence.
+verify source snapshots, and restart the application host to check persistence. Fake-provider tests cover AI
+consent, separate suggestions, failure handling, and stale-edit rejection without paid calls.
 The workflow discards its container after the run.
 
 Do not point TEST_SQL_CONNECTION at a production or personal database.
@@ -114,7 +119,7 @@ Test registration uses synthetic example.test accounts.
 
 See [MVP scope](docs/mvp.md) and [ordered tasks](docs/backlog.md).
 
-1. AI tailoring with a provider abstraction, truthful suggestions, and failure handling.
+1. Configure an AI model and evaluate output on synthetic resumes.
 2. Confirmed email, password recovery, and account lifecycle checks.
 3. Browser/accessibility review, deployment, backups, and production configuration.
 
@@ -129,7 +134,7 @@ applications remain later work.
 Configure email delivery/confirmation, AllowedHosts, HTTPS, persistent Data
 Protection keys, migration deployment, backups, and secret storage before hosting.
 Email confirmation is disabled in this development preview.
-Concurrent edits currently use last-write-wins; conflict detection is a backlog item.
+Draft edits and AI acceptance detect conflicts. Jobs and base resumes still use last-write-wins.
 Do not commit real resumes, credentials, or database exports or log resume bodies.
 
 ## License

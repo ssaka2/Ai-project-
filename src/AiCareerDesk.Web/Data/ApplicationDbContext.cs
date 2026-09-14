@@ -10,6 +10,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 {
     public DbSet<JobApplication> Jobs => Set<JobApplication>();
 
+    public DbSet<TailoringSuggestion> TailoringSuggestions => Set<TailoringSuggestion>();
     public DbSet<Resume> Resumes => Set<Resume>();
     public DbSet<ResumeDraft> ResumeDrafts => Set<ResumeDraft>();
     public DbSet<ApplicationStatusHistory> StatusHistory => Set<ApplicationStatusHistory>();
@@ -17,6 +18,9 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
+        builder.Entity<TailoringSuggestion>().HasOne<ResumeDraft>().WithMany()
+            .HasForeignKey(x => x.ResumeDraftId).OnDelete(DeleteBehavior.Cascade);
+        builder.Entity<TailoringSuggestion>().HasIndex(x => new { x.ResumeDraftId, x.CreatedUtc });
         builder.Entity<Resume>().HasIndex(x => x.OwnerId);
         builder.Entity<Resume>().HasOne<IdentityUser>().WithMany()
             .HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Cascade);

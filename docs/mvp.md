@@ -15,10 +15,13 @@ direction follows the owner's earlier requests.
 3. Resumes: private base-text CRUD, independent drafts, immutable source snapshots,
    and text downloads.
 
+4. Optional AI: OpenAI adapter, separate suggestions, gap summaries, consent, limits,
+   timeouts, review/apply flow, and draft conflict detection.
+
 ## Remaining v0.1 milestones
 
-4. AI: provider abstraction, truthful tailoring, skill gaps, timeouts/rate limits.
-5. Release: email confirmation/recovery, deployment, browser/accessibility review.
+5. Live AI evaluation after provider configuration.
+6. Release: email confirmation/recovery, deployment, browser/accessibility review.
 
 ## Acceptance criteria
 
@@ -28,6 +31,7 @@ direction follows the owner's earlier requests.
 - Mutations require POST and antiforgery protection.
 - Submitted owner IDs cannot override authenticated ownership.
 - Source edits/deletions do not rewrite existing draft snapshots.
+- Generation never overwrites a draft; acceptance requires review and a matching version.
 - Editing a draft leaves its base resume unchanged.
 - Actual status changes append history in the same transaction.
 - Applied is user-confirmed, never inferred from opening an employer URL.

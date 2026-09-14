@@ -1,0 +1,50 @@
+@page "{id:guid}"
+@model AiCareerDesk.Web.Pages.Resumes.TailorModel
+@{ ViewData["Title"] = "AI suggestions"; }
+<h1>AI suggestions</h1>
+<p>@Model.Draft.Name</p>
+<div asp-validation-summary="All" class="validation" role="alert"></div>
+<a asp-page="Draft" asp-route-id="@Model.Draft.Id">Back to draft editor</a>
+@if (Model.IsConfigured)
+{
+    <form method="post" asp-page-handler="Generate" class="editor">
+        <p>Generate from this draft's original resume and job-description snapshots. Your saved draft stays unchanged until you apply a suggestion.</p>
+        <label><input asp-for="Consent" /> Send the source resume and job description shown below to OpenAI for tailoring.</label>
+        <button type="submit">Generate a suggestion</button>
+    </form>
+}
+else
+{
+    <p>AI tailoring is not enabled by the application owner. You can still edit and download drafts.</p>
+}
+<details><summary>Source documents sent for generation</summary>
+    <h2>Resume</h2><pre class="snapshot">@Model.Draft.ResumeSnapshot</pre>
+    <h2>Job description</h2><pre class="snapshot">@Model.Draft.JobDescriptionSnapshot</pre>
+</details>
+@if (Model.Selected is not null)
+{
+    <h2>Review suggestion</h2>
+    <p>AI suggestions can be inaccurate. Check every qualification and achievement against your actual experience.</p>
+    <div class="comparison">
+        <section><h3>Current saved draft</h3><pre class="snapshot">@Model.Draft.Content</pre></section>
+        <section><h3>Suggested text</h3><pre class="snapshot">@Model.Selected.Content</pre></section>
+    </div>
+    <h3>Requirements not evidenced in the source resume</h3>
+    @if (string.IsNullOrWhiteSpace(Model.Selected.SkillGaps))
+    {
+        <p>No gaps were reported. This is not a guarantee of qualification.</p>
+    }
+    else { <pre class="snapshot">@Model.Selected.SkillGaps</pre> }
+    <form method="post" asp-page-handler="Apply">
+        <input type="hidden" asp-for="ExpectedVersion" />
+        <input type="hidden" name="SuggestionId" value="@Model.Selected.Id" />
+        <button type="submit">Use this suggestion in my draft</button>
+    </form>
+    <p><a asp-page="Tailor" asp-route-id="@Model.Draft.Id" asp-route-suggestion="@Model.Selected.Id">Reload comparison with the latest saved draft</a></p>
+}
+<h2>Previous suggestions</h2>
+@if (Model.Suggestions.Count == 0) { <p>No suggestions yet.</p> }
+@foreach (var suggestion in Model.Suggestions)
+{
+    <p><a asp-page="Tailor" asp-route-id="@Model.Draft.Id" asp-route-suggestion="@suggestion.Id">@suggestion.CreatedUtc.ToString("yyyy-MM-dd HH:mm:ss") UTC</a></p>
+}

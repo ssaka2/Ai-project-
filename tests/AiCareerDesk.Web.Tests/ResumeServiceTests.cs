@@ -32,11 +32,11 @@ public class ResumeServiceTests
             draftId = (await resumes.CreateDraftAsync("alice", resumeId, jobId))!.Value;
             Assert.Null(await resumes.GetDraftAsync("bob", draftId));
             Assert.Empty(await resumes.ListDraftsAsync("bob"));
-            Assert.False(await resumes.UpdateDraftAsync("bob", draftId, new DraftInput { Content = "Attack" }));
+            Assert.Equal(DraftWriteResult.NotFound, await resumes.UpdateDraftAsync("bob", draftId, new DraftInput { Content = "Attack" }));
             Assert.False(await resumes.DeleteDraftAsync("bob", draftId));
             Assert.False(await resumes.UpdateAsync("bob", resumeId, new ResumeInput { Name = "Attack", Content = "Attack" }));
             Assert.False(await resumes.DeleteAsync("bob", resumeId));
-            Assert.True(await resumes.UpdateDraftAsync("alice", draftId, new DraftInput { Content = "Edited draft" }));
+            Assert.Equal(DraftWriteResult.Saved, await resumes.UpdateDraftAsync("alice", draftId, new DraftInput { Content = "Edited draft", Version = (await resumes.GetDraftAsync("alice", draftId))!.Version }));
             Assert.Equal("Original C# experience", (await resumes.GetAsync("alice", resumeId))!.Content);
             await resumes.UpdateAsync("alice", resumeId, new ResumeInput { Name = "New", Content = "Changed resume" });
             await jobs.UpdateAsync("alice", jobId, new JobInput { Title = "New", Company = "Example", Description = "Changed job" });
