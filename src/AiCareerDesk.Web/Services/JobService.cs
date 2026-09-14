@@ -37,7 +37,15 @@ public class JobService(ApplicationDbContext db)
     {
         var job = await Owned(ownerId).SingleOrDefaultAsync(x => x.Id == id);
         if (job is null) return false;
+        var previousStatus = job.Status;
         Apply(job, input);
+        if (previousStatus != job.Status)
+            db.StatusHistory.Add(new ApplicationStatusHistory
+            {
+                JobApplicationId = job.Id, FromStatus = previousStatus,
+                ToStatus = job.Status, ChangedUtc = job.UpdatedUtc
+            });
+        // EF commits the job update and its history event in one transaction.
         await db.SaveChangesAsync();
         return true;
     }
@@ -49,6 +57,13 @@ public class JobService(ApplicationDbContext db)
         db.Jobs.Remove(job);
         await db.SaveChangesAsync();
         return true;
+    }
+
+    public async Task<List<ApplicationStatusHistory>> HistoryAsync(string ownerId, Guid id)
+    {
+        if (!await Owned(ownerId).AnyAsync(x => x.Id == id)) return [];
+        return await db.StatusHistory.AsNoTracking().Where(x => x.JobApplicationId == id)
+            .OrderByDescending(x => x.ChangedUtc).ToListAsync();
     }
 
     private static void Apply(JobApplication job, JobInput input)

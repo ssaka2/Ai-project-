@@ -19,7 +19,12 @@ builder.Services.AddDefaultIdentity<IdentityUser>(options =>
     options.Password.RequiredLength = 12;
 }).AddEntityFrameworkStores<ApplicationDbContext>();
 builder.Services.AddScoped<JobService>();
-builder.Services.AddRazorPages(options => options.Conventions.AuthorizeFolder("/Jobs"));
+builder.Services.AddScoped<ResumeService>();
+builder.Services.AddRazorPages(options =>
+{
+    options.Conventions.AuthorizeFolder("/Jobs");
+    options.Conventions.AuthorizeFolder("/Resumes");
+});
 
 var app = builder.Build();
 // Validate after the host has applied all configuration sources.
@@ -37,14 +42,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapRazorPages();
 
-// Explicitly opt in for a fresh, disposable development database only.
-// Replace with committed migrations before retaining real data or deploying.
-if (app.Environment.IsDevelopment() &&
-    builder.Configuration.GetValue<bool>("Database:InitializeDevelopmentDatabase"))
-{
-    using var scope = app.Services.CreateScope();
-    await scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Database.EnsureCreatedAsync();
-}
 app.Run();
 
 public partial class Program { }

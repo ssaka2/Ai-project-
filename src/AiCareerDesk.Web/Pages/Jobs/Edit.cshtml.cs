@@ -9,6 +9,7 @@ namespace AiCareerDesk.Web.Pages.Jobs;
 public class EditModel(JobService jobs) : PageModel
 {
     [BindProperty] public JobInput Input { get; set; } = new();
+    public List<ApplicationStatusHistory> History { get; private set; } = [];
     private string OwnerId => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 
     public async Task<IActionResult> OnGetAsync(Guid id)
@@ -21,13 +22,18 @@ public class EditModel(JobService jobs) : PageModel
             ApplicationUrl = job.ApplicationUrl, Description = job.Description,
             Notes = job.Notes, Status = job.Status
         };
+        History = await jobs.HistoryAsync(OwnerId, id);
         return Page();
     }
 
     public async Task<IActionResult> OnPostAsync(Guid id)
     {
         if (await jobs.GetAsync(OwnerId, id) is null) return NotFound();
-        if (!ModelState.IsValid) return Page();
+        if (!ModelState.IsValid)
+        {
+            History = await jobs.HistoryAsync(OwnerId, id);
+            return Page();
+        }
         if (!await jobs.UpdateAsync(OwnerId, id, Input)) return NotFound();
         return RedirectToPage("Index");
     }

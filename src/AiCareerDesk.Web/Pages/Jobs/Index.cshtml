@@ -24,6 +24,10 @@
     <article class="job">
         <h2><a asp-page="Edit" asp-route-id="@job.Id">@job.Title</a></h2>
         <p>@job.Company · @job.Location</p>
+        @if (!string.IsNullOrWhiteSpace(job.ApplicationUrl))
+        {
+            <a href="@job.ApplicationUrl" target="_blank" rel="noopener noreferrer">Open employer application</a>
+        }
         <span class="badge">@job.Status</span>
         <p>Updated @job.UpdatedUtc.ToString("yyyy-MM-dd") UTC</p>
     </article>

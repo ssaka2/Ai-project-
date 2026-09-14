@@ -10,9 +10,22 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 {
     public DbSet<JobApplication> Jobs => Set<JobApplication>();
 
+    public DbSet<Resume> Resumes => Set<Resume>();
+    public DbSet<ResumeDraft> ResumeDrafts => Set<ResumeDraft>();
+    public DbSet<ApplicationStatusHistory> StatusHistory => Set<ApplicationStatusHistory>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
+        builder.Entity<Resume>().HasIndex(x => x.OwnerId);
+        builder.Entity<Resume>().HasOne<IdentityUser>().WithMany()
+            .HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Cascade);
+        builder.Entity<ResumeDraft>().HasIndex(x => x.OwnerId);
+        builder.Entity<ResumeDraft>().HasOne<IdentityUser>().WithMany()
+            .HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Cascade);
+        builder.Entity<ApplicationStatusHistory>().HasOne<JobApplication>().WithMany()
+            .HasForeignKey(x => x.JobApplicationId).OnDelete(DeleteBehavior.Cascade);
+        builder.Entity<ApplicationStatusHistory>().HasIndex(x => new { x.JobApplicationId, x.ChangedUtc });
         builder.Entity<JobApplication>().HasIndex(x => new { x.OwnerId, x.Status });
         builder.Entity<JobApplication>().HasOne<IdentityUser>().WithMany()
             .HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Cascade);

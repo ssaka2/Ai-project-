@@ -16,3 +16,10 @@
     <a asp-page="Index">Back to jobs</a>
 </form>
 <a asp-page="Delete" asp-route-id="@RouteData.Values["id"]">Delete this job</a>
+
+<h2>Status history</h2>
+@if (Model.History.Count == 0) { <p>No status changes yet.</p> }
+@foreach (var change in Model.History)
+{
+    <p>@change.ChangedUtc.ToString("yyyy-MM-dd HH:mm") UTC: @change.FromStatus → @change.ToStatus</p>
+}
