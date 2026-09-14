@@ -69,15 +69,22 @@ public class ResumeService(ApplicationDbContext db)
         await db.SaveChangesAsync();
         return draft.Id;
     }
-    public async Task<bool> UpdateDraftAsync(string owner, Guid id, DraftInput input)
+    public async Task<DraftWriteResult> UpdateDraftAsync(string owner, Guid id, DraftInput input)
     {
         var draft = await Drafts(owner).SingleOrDefaultAsync(x => x.Id == id);
-        if (draft is null) return false;
+        if (draft is null) return DraftWriteResult.NotFound;
+        if (draft.Version != input.Version) return DraftWriteResult.Conflict;
         Validator.ValidateObject(input, new ValidationContext(input), true);
         draft.Content = input.Content;
+        draft.Version = Guid.NewGuid();
         draft.UpdatedUtc = DateTime.UtcNow;
-        await db.SaveChangesAsync();
-        return true;
+        try { await db.SaveChangesAsync(); }
+        catch (DbUpdateConcurrencyException)
+        {
+            db.Entry(draft).State = EntityState.Detached;
+            return DraftWriteResult.Conflict;
+        }
+        return DraftWriteResult.Saved;
     }
     public async Task<bool> DeleteDraftAsync(string owner, Guid id)
     {

@@ -1,3 +1,4 @@
+using AiCareerDesk.Web.Services.AI;
 using AiCareerDesk.Web.Data;
 using AiCareerDesk.Web.Services;
 using Microsoft.AspNetCore.Identity;
@@ -20,6 +21,13 @@ builder.Services.AddDefaultIdentity<IdentityUser>(options =>
 }).AddEntityFrameworkStores<ApplicationDbContext>();
 builder.Services.AddScoped<JobService>();
 builder.Services.AddScoped<ResumeService>();
+builder.Services.Configure<AiOptions>(builder.Configuration.GetSection("AI"));
+builder.Services.AddHttpClient<IResumeTailoringService, OpenAiResumeTailoringService>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(65);
+}).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
+builder.Services.AddSingleton<GenerationGate>();
+builder.Services.AddScoped<TailoringWorkflow>();
 builder.Services.AddRazorPages(options =>
 {
     options.Conventions.AuthorizeFolder("/Jobs");

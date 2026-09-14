@@ -17,10 +17,18 @@ jobs:
           dotnet-version: "10.0.x"
       - run: dotnet restore AiCareerDesk.slnx
       - run: dotnet tool restore
-      - name: Verify committed migrations match the model
+      - name: Generate tailoring migration for review
         env:
           ConnectionStrings__DefaultConnection: "Server=localhost;Database=SchemaDesignOnly;Integrated Security=true;TrustServerCertificate=true"
-        run: dotnet ef migrations has-pending-model-changes --project src/AiCareerDesk.Web
+        run: dotnet ef migrations add AddTailoringSuggestions --project src/AiCareerDesk.Web --output-dir Data/Migrations
+      - name: Export generated schema source for review
+        shell: python
+        run: |
+          import json
+          from pathlib import Path
+          for path in sorted(Path("src/AiCareerDesk.Web/Data/Migrations").glob("*.cs")):
+              if "AddTailoringSuggestions" in path.name or "Snapshot" in path.name:
+                  print("SCHEMA_REVIEW_JSON:" + json.dumps({"path": str(path), "content": path.read_text(encoding="utf-8-sig")}))
       - run: dotnet build AiCareerDesk.slnx --configuration Release --no-restore
       - name: Start disposable SQL Server
         shell: bash

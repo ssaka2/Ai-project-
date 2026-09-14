@@ -17,3 +17,5 @@ input[type=checkbox]{width:auto}.editor{max-width:760px}.editor button{margin:1r
 footer{color:#53637d;margin-top:3rem}a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:3px solid #b46a00;outline-offset:3px}
 
 .snapshot{white-space:pre-wrap;overflow-wrap:anywhere;background:white;padding:1rem}details{margin:1rem 0}summary{cursor:pointer;font-weight:600}
+
+.comparison{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}@media(max-width:700px){.comparison{grid-template-columns:1fr}}

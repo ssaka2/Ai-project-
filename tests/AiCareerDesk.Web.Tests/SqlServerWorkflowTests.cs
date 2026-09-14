@@ -1,3 +1,8 @@
+using AiCareerDesk.Web.Models;
+using AiCareerDesk.Web.Services;
+using AiCareerDesk.Web.Services.AI;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using System.Net;
 using System.Text.RegularExpressions;
 using AiCareerDesk.Web.Data;
@@ -20,10 +25,16 @@ public sealed class SqlServerFactAttribute : FactAttribute
 
 public class SqlServerWorkflowTests
 {
-    private static WebApplicationFactory<Program> Factory() =>
+    private static WebApplicationFactory<Program> Factory(bool enableFakeAi = false) =>
         new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
         {
             builder.UseEnvironment("Testing");
+            if (enableFakeAi)
+                builder.ConfigureTestServices(services =>
+                {
+                    services.RemoveAll<IResumeTailoringService>();
+                    services.AddSingleton<IResumeTailoringService>(new TestTailoringProvider());
+                });
             builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(
                 new Dictionary<string, string?>
                 {
@@ -37,15 +48,21 @@ public class SqlServerWorkflowTests
             BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false
         });
 
-    private static async Task<HttpResponseMessage> Post(HttpClient client, string path, Dictionary<string, string> fields)
+    private static async Task<HttpResponseMessage> Post(HttpClient client, string path, Dictionary<string, string> fields, string? getPath = null)
     {
-        var page = await client.GetAsync(path);
+        var page = await client.GetAsync(getPath ?? path);
         Assert.Equal(HttpStatusCode.OK, page.StatusCode);
         var html = await page.Content.ReadAsStringAsync();
         var input = Regex.Match(html, "<input[^>]*name=\"__RequestVerificationToken\"[^>]*>");
         Assert.True(input.Success, "Expected a real antiforgery form token.");
         var value = Regex.Match(input.Value, "value=\"([^\"]+)\"").Groups[1].Value;
         fields["__RequestVerificationToken"] = WebUtility.HtmlDecode(value);
+        foreach (Match hidden in Regex.Matches(html, """<input[^>]*type="hidden"[^>]*>"""))
+        {
+            var name = Regex.Match(hidden.Value, """name="([^"]+)""").Groups[1].Value;
+            var hiddenValue = Regex.Match(hidden.Value, """value="([^"]*)""").Groups[1].Value;
+            if (!string.IsNullOrEmpty(name)) fields.TryAdd(name, WebUtility.HtmlDecode(hiddenValue));
+        }
         return await client.PostAsync(path, new FormUrlEncodedContent(fields));
     }
 
@@ -159,5 +176,69 @@ public class SqlServerWorkflowTests
             Assert.Contains("Original SQL Server resume", await alice.GetStringAsync("/Resumes/Draft/" + draftId));
             Assert.Equal("Edited draft", await alice.GetStringAsync("/Resumes/Draft/" + draftId + "?handler=Download"));
         }
+    }
+
+    [SqlServerFact]
+    public async Task AiSuggestionsRequireReviewAndRejectStaleHttpEdits()
+    {
+        await using var factory = Factory(enableFakeAi: true);
+        using (var scope = factory.Services.CreateScope())
+            await scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Database.MigrateAsync();
+        using var alice = Client(factory);
+        using var bob = Client(factory);
+        var email = "ai-" + Guid.NewGuid().ToString("N") + "@example.test";
+        await Register(alice, email);
+        await Register(bob, "other-" + Guid.NewGuid().ToString("N") + "@example.test");
+        Guid id; Guid originalVersion;
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var owner = (await db.Users.SingleAsync(x => x.Email == email)).Id;
+            var resume = await new ResumeService(db).CreateAsync(owner, new ResumeInput { Name = "Base", Content = "Original C# resume" });
+            var job = await new JobService(db).CreateAsync(owner, new JobInput { Title = "C# role", Company = "Example", Description = "Cloud experience" });
+            id = (await new ResumeService(db).CreateDraftAsync(owner, resume, job))!.Value;
+            originalVersion = (await db.ResumeDrafts.SingleAsync(x => x.Id == id)).Version;
+        }
+        var path = "/Resumes/Tailor/" + id;
+        var provider = (TestTailoringProvider)factory.Services.GetRequiredService<IResumeTailoringService>();
+        var noConsent = await Post(alice, path + "?handler=Generate", new(), path);
+        Assert.Equal(HttpStatusCode.OK, noConsent.StatusCode);
+        Assert.Contains("Confirm that you want", await noConsent.Content.ReadAsStringAsync());
+        Assert.Equal(0, provider.Calls);
+        var forbidden = await Post(bob, path + "?handler=Generate", new() { ["Consent"] = "true" }, "/Jobs/Create");
+        Assert.Equal(HttpStatusCode.NotFound, forbidden.StatusCode);
+        Assert.Equal(0, provider.Calls);
+        Assert.Equal(HttpStatusCode.BadRequest, (await alice.PostAsync(path + "?handler=Generate",
+            new FormUrlEncodedContent(new Dictionary<string, string> { ["Consent"] = "true" }))).StatusCode);
+        var generated = await Post(alice, path + "?handler=Generate", new() { ["Consent"] = "true" }, path);
+        Assert.Equal(HttpStatusCode.Redirect, generated.StatusCode);
+        Assert.Equal(1, provider.Calls);
+        var comparison = await alice.GetStringAsync(path);
+        Assert.Contains("Suggested C# resume", comparison);
+        Assert.Contains("Cloud certification not evidenced", comparison);
+        Assert.Equal("Original C# resume", await alice.GetStringAsync("/Resumes/Draft/" + id + "?handler=Download"));
+        var manual = await Post(alice, "/Resumes/Draft/" + id, new()
+        {
+            ["Input.Content"] = "My saved manual edit", ["Input.Version"] = originalVersion.ToString()
+        });
+        Assert.Equal(HttpStatusCode.Redirect, manual.StatusCode);
+        var staleApply = await Post(alice, path + "?handler=Apply", new() { ["ExpectedVersion"] = originalVersion.ToString() }, path);
+        Assert.Equal(HttpStatusCode.Conflict, staleApply.StatusCode);
+        Assert.Equal("My saved manual edit", await alice.GetStringAsync("/Resumes/Draft/" + id + "?handler=Download"));
+        var staleEdit = await Post(alice, "/Resumes/Draft/" + id, new()
+        {
+            ["Input.Content"] = "Unsaved stale edit", ["Input.Version"] = originalVersion.ToString()
+        });
+        Assert.Equal(HttpStatusCode.Conflict, staleEdit.StatusCode);
+        Assert.Contains("Unsaved stale edit", await staleEdit.Content.ReadAsStringAsync());
+        var applied = await Post(alice, path + "?handler=Apply", new(), path);
+        Assert.Equal(HttpStatusCode.Redirect, applied.StatusCode);
+        Assert.Equal("Suggested C# resume", await alice.GetStringAsync("/Resumes/Draft/" + id + "?handler=Download"));
+        provider.BeforeReturn = _ => throw new TailoringException("AI unavailable");
+        var failed = await Post(alice, path + "?handler=Generate", new() { ["Consent"] = "true" }, path);
+        Assert.Equal(HttpStatusCode.OK, failed.StatusCode);
+        Assert.Contains("AI unavailable", await failed.Content.ReadAsStringAsync());
+        Assert.Equal("Suggested C# resume", await alice.GetStringAsync("/Resumes/Draft/" + id + "?handler=Download"));
+        Assert.Contains("Suggested C# resume", await alice.GetStringAsync(path));
     }
 }
