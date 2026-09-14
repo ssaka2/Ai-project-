@@ -1,3 +1,4 @@
+using Microsoft.Data.SqlClient;
 using System.Diagnostics;
 using System.Net;
 using AiCareerDesk.Web.Data;
@@ -22,7 +23,10 @@ public class BrowserWorkflowTests
     [BrowserFact]
     public async Task ChromiumCompletesPrivateJobAndResumeWorkflowAtDesktopAndMobileWidths()
     {
-        var connection = Environment.GetEnvironmentVariable("TEST_SQL_CONNECTION")!;
+        var connection = new SqlConnectionStringBuilder(Environment.GetEnvironmentVariable("TEST_SQL_CONNECTION"))
+        {
+            InitialCatalog = "CareerBrowser_" + Guid.NewGuid().ToString("N")
+        }.ConnectionString;
         await using (var db = new ApplicationDbContext(new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlServer(connection).Options))
             await db.Database.MigrateAsync();
 
@@ -136,6 +140,8 @@ public class BrowserWorkflowTests
         {
             if (!server.HasExited) server.Kill(entireProcessTree: true);
             await server.WaitForExitAsync();
+            await using var cleanup = new ApplicationDbContext(new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlServer(connection).Options);
+            await cleanup.Database.EnsureDeletedAsync();
         }
     }
 
