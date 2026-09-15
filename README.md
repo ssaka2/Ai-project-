@@ -41,6 +41,7 @@ Database data and application keys persist across restarts.
 See [full setup and production configuration](docs/full-stack-setup.md)
 for .NET SDK development, ports, updates, and account behavior.
 
+For the free Azure target, start with the [read-only deployment diagnostics](docs/azure-free-deployment.md).
 For Railway, see [deployment configuration and required service settings](docs/railway-deployment.md).
 
 This is a runnable development version. Public hosting and live AI evaluation
