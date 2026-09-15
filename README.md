@@ -24,7 +24,7 @@ Install Docker with Compose v2 and Linux container support.
 ```sh
 git clone https://github.com/ssaka2/Ai-project-.git
 cd Ai-project-
-git checkout codex/ai-resume-tailoring
+git checkout main
 python3 scripts/setup.py
 docker compose up --build -d --wait web
 ```
@@ -40,6 +40,8 @@ SQL Server, the web app, migrations, and a local SMTP inbox run together.
 Database data and application keys persist across restarts.
 See [full setup and production configuration](docs/full-stack-setup.md)
 for .NET SDK development, ports, updates, and account behavior.
+
+For Railway, see [deployment configuration and required service settings](docs/railway-deployment.md).
 
 This is a runnable development version. Public hosting and live AI evaluation
 remain release work.
