@@ -84,8 +84,10 @@ for fifteen minutes. Use the resend-confirmation link if the original email fail
 Account → Personal data → Delete removes the account and its jobs, status
 history, resumes, drafts, and suggestions through database cascades. Existing
 backups retain their contents until the backup retention period expires.
-Identity's personal-data download concerns account fields; download saved resume
-drafts separately before deleting an account.
+Use Export my data in the navigation to download account details and all career
+records as JSON before deleting an account. Password hashes, authentication tokens,
+and server credentials are excluded. The built-in Identity personal-data download
+still concerns account fields only.
 
 ## Optional AI
 

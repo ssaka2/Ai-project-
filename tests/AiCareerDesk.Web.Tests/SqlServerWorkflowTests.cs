@@ -372,4 +372,87 @@ public class SqlServerWorkflowTests
             Assert.False(await db.StatusHistory.AnyAsync(x => x.JobApplicationId == jobId));
         }
     }
+
+    [SqlServerFact]
+    public async Task ExportIsPrivateAndStaleDeletionDoesNotDiscardNewerEdits()
+    {
+        await using var factory = Factory(enableFakeAi: true);
+        using (var scope = factory.Services.CreateScope())
+            await scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Database.MigrateAsync();
+        using var alice = Client(factory);
+        using var bob = Client(factory);
+        var aliceEmail = "export-" + Guid.NewGuid().ToString("N") + "@example.test";
+        var bobEmail = "other-export-" + Guid.NewGuid().ToString("N") + "@example.test";
+        await Register(alice, aliceEmail);
+        await Register(bob, bobEmail);
+        Guid jobId; Guid resumeId; Guid draftId; Guid jobVersion; Guid resumeVersion; Guid draftVersion;
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var owner = (await db.Users.SingleAsync(x => x.Email == aliceEmail)).Id;
+            var other = (await db.Users.SingleAsync(x => x.Email == bobEmail)).Id;
+            var jobs = new JobService(db);
+            var resumes = new ResumeService(db);
+            jobId = await jobs.CreateAsync(owner, new JobInput { Title = "Exported job", Company = "Example", Description = "C#" });
+            resumeId = await resumes.CreateAsync(owner, new ResumeInput { Name = "Exported resume", Content = "Original source" });
+            draftId = (await resumes.CreateDraftAsync(owner, resumeId, jobId))!.Value;
+            await jobs.CreateAsync(other, new JobInput { Title = "Other account private job", Company = "Other" });
+            await resumes.CreateAsync(other, new ResumeInput { Name = "Other private resume", Content = "Other secret content" });
+            jobVersion = (await jobs.GetAsync(owner, jobId))!.Version;
+            resumeVersion = (await resumes.GetAsync(owner, resumeId))!.Version;
+            draftVersion = (await resumes.GetDraftAsync(owner, draftId))!.Version;
+        }
+        Assert.Equal(HttpStatusCode.Redirect, (await Post(alice, "/Jobs/Edit/" + jobId, new()
+        {
+            ["Input.Title"] = "Newer job", ["Input.Company"] = "Example", ["Input.Status"] = "1",
+            ["Input.Version"] = jobVersion.ToString()
+        })).StatusCode);
+        Assert.Equal(HttpStatusCode.Redirect, (await Post(alice, "/Resumes/Edit/" + resumeId, new()
+        {
+            ["Input.Name"] = "Base", ["Input.Content"] = "Newer resume", ["Input.Version"] = resumeVersion.ToString()
+        })).StatusCode);
+        Assert.Equal(HttpStatusCode.Redirect, (await Post(alice, "/Resumes/Draft/" + draftId, new()
+        {
+            ["Input.Content"] = "Newer draft", ["Input.Version"] = draftVersion.ToString()
+        })).StatusCode);
+        foreach (var (path, version) in new[]
+        {
+            ("/Jobs/Delete/" + jobId, jobVersion),
+            ("/Resumes/Delete/" + resumeId, resumeVersion),
+            ("/Resumes/Delete/" + draftId + "?draft=true", draftVersion)
+        })
+        {
+            var conflict = await Post(alice, path, new() { ["ExpectedVersion"] = version.ToString() });
+            Assert.Equal(HttpStatusCode.Conflict, conflict.StatusCode);
+            Assert.Contains("changed after you opened", await conflict.Content.ReadAsStringAsync());
+            Assert.Equal(HttpStatusCode.OK, (await alice.GetAsync(path)).StatusCode);
+        }
+        var tailor = "/Resumes/Tailor/" + draftId;
+        Assert.Equal(HttpStatusCode.Redirect, (await Post(alice, tailor + "?handler=Generate",
+            new() { ["Consent"] = "true" }, tailor)).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await alice.PostAsync("/Account/Export",
+            new FormUrlEncodedContent(new Dictionary<string, string>()))).StatusCode);
+        var export = await Post(alice, "/Account/Export", new());
+        Assert.Equal(HttpStatusCode.OK, export.StatusCode);
+        Assert.Equal("application/json", export.Content.Headers.ContentType!.MediaType);
+        Assert.True(export.Headers.CacheControl!.NoStore);
+        var content = await export.Content.ReadAsStringAsync();
+        using var json = System.Text.Json.JsonDocument.Parse(content);
+        Assert.Equal(aliceEmail, json.RootElement.GetProperty("Account").GetProperty("Email").GetString());
+        Assert.Equal(1, json.RootElement.GetProperty("Jobs").GetArrayLength());
+        Assert.Equal(1, json.RootElement.GetProperty("StatusHistory").GetArrayLength());
+        Assert.Equal(1, json.RootElement.GetProperty("Resumes").GetArrayLength());
+        Assert.Equal(1, json.RootElement.GetProperty("Drafts").GetArrayLength());
+        Assert.Equal(1, json.RootElement.GetProperty("Suggestions").GetArrayLength());
+        Assert.Contains("Original source", content);
+        Assert.Contains("Newer draft", content);
+        Assert.DoesNotContain("Other secret content", content);
+        Assert.DoesNotContain("Other account private job", content);
+        Assert.DoesNotContain("PasswordHash", content);
+        Assert.DoesNotContain("SecurityStamp", content);
+        Assert.DoesNotContain("Synthetic-Test-Password42!", content);
+        foreach (var path in new[] { "/Jobs/Delete/" + jobId, "/Resumes/Delete/" + resumeId,
+            "/Resumes/Delete/" + draftId + "?draft=true" })
+            Assert.Equal(HttpStatusCode.Redirect, (await Post(alice, path, new())).StatusCode);
+    }
 }

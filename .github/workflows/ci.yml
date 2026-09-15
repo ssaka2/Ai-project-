@@ -20,8 +20,8 @@ jobs:
       - name: Verify committed migrations match the model
         run: dotnet ef migrations has-pending-model-changes --project src/AiCareerDesk.Web
       - run: dotnet build AiCareerDesk.slnx --configuration Release --no-restore
-      - name: Install Chromium for browser verification
-        run: pwsh tests/AiCareerDesk.Web.Tests/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
+      - name: Install browsers for workflow verification
+        run: pwsh tests/AiCareerDesk.Web.Tests/bin/Release/net10.0/playwright.ps1 install --with-deps chromium firefox webkit
       - name: Audit dependency advisories
         shell: bash
         run: |

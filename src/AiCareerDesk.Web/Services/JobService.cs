@@ -60,13 +60,19 @@ public class JobService(ApplicationDbContext db)
         return WriteResult.Saved;
     }
 
-    public async Task<bool> DeleteAsync(string ownerId, Guid id)
+    public async Task<WriteResult> DeleteAsync(string ownerId, Guid id, Guid expectedVersion)
     {
         var job = await Owned(ownerId).SingleOrDefaultAsync(x => x.Id == id);
-        if (job is null) return false;
+        if (job is null) return WriteResult.NotFound;
+        if (job.Version != expectedVersion) return WriteResult.Conflict;
         db.Jobs.Remove(job);
-        await db.SaveChangesAsync();
-        return true;
+        try { await db.SaveChangesAsync(); }
+        catch (DbUpdateConcurrencyException)
+        {
+            db.Entry(job).State = EntityState.Detached;
+            return WriteResult.Conflict;
+        }
+        return WriteResult.Saved;
     }
 
     public async Task<List<ApplicationStatusHistory>> HistoryAsync(string ownerId, Guid id)

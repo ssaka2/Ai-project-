@@ -3,7 +3,9 @@
 @{ ViewData["Title"] = "Delete job"; }
 <h1>Delete this job?</h1>
 <p>@Model.Job.Title at @Model.Job.Company and its notes will be permanently removed.</p>
+<div asp-validation-summary="All" role="alert"></div>
 <form method="post">
+    <input type="hidden" asp-for="ExpectedVersion" />
     <button type="submit">Delete job</button>
     <a asp-page="Edit" asp-route-id="@Model.Job.Id">Keep job</a>
 </form>

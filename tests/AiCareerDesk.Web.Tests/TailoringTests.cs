@@ -116,7 +116,8 @@ public class TailoringTests
         f.Provider.BeforeReturn = async _ =>
         {
             await using var other = f.NewContext();
-            await new ResumeService(other).DeleteDraftAsync("alice", f.DraftId);
+            await new ResumeService(other).DeleteDraftAsync("alice", f.DraftId,
+                (await new ResumeService(other).GetDraftAsync("alice", f.DraftId))!.Version);
         };
         Assert.Null(await f.Workflow.GenerateAsync("alice", f.DraftId, true, default));
         Assert.Empty(await f.Db.TailoringSuggestions.ToListAsync());
@@ -189,5 +190,29 @@ public class TailoringTests
         Assert.Equal("First", (await new JobService(f.Db).GetAsync("alice", jobA.Id))!.Title);
         Assert.Equal(ApplicationStatus.Applied, Assert.Single(await new JobService(f.Db).HistoryAsync("alice", jobA.Id)).ToStatus);
         Assert.Equal("First resume", (await new ResumeService(f.Db).GetAsync("alice", resumeA.Id))!.Content);
+    }
+
+    [Fact]
+    public async Task ConcurrentDeletesRejectChangesCommittedAfterRecordsWereLoaded()
+    {
+        await using var f = new Fixture(); await f.StartAsync();
+        await using var deleting = f.NewContext();
+        await using var editing = f.NewContext();
+        var job = await deleting.Jobs.SingleAsync();
+        var resume = await deleting.Resumes.SingleAsync();
+        var draft = await deleting.ResumeDrafts.SingleAsync();
+        await new JobService(editing).UpdateAsync("alice", job.Id,
+            new JobInput { Title = "Keep job", Company = "Example", Version = job.Version });
+        await new ResumeService(editing).UpdateAsync("alice", resume.Id,
+            new ResumeInput { Name = "Keep resume", Content = "Keep content", Version = resume.Version });
+        await new ResumeService(editing).UpdateDraftAsync("alice", draft.Id,
+            new DraftInput { Content = "Keep draft", Version = draft.Version });
+        Assert.Equal(WriteResult.Conflict, await new JobService(deleting).DeleteAsync("alice", job.Id, job.Version));
+        Assert.Equal(WriteResult.Conflict, await new ResumeService(deleting).DeleteAsync("alice", resume.Id, resume.Version));
+        Assert.Equal(WriteResult.Conflict, await new ResumeService(deleting).DeleteDraftAsync("alice", draft.Id, draft.Version));
+        await deleting.SaveChangesAsync();
+        Assert.NotNull(await new JobService(f.Db).GetAsync("alice", job.Id));
+        Assert.NotNull(await new ResumeService(f.Db).GetAsync("alice", resume.Id));
+        Assert.NotNull(await new ResumeService(f.Db).GetDraftAsync("alice", draft.Id));
     }
 }

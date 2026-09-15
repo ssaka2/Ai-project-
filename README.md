@@ -11,7 +11,8 @@ and preparing job-specific resume drafts.
 - Save base resumes, create independent job-specific drafts, and download text.
 - Preserve original resume/job snapshots even after editing or deleting sources.
 - Optionally generate AI suggestions and skill gaps, then review before applying.
-- Receive a conflict message when another session has changed the record.
+- Receive a conflict message when another session has changed a record you are editing or deleting.
+- Export your account details, jobs, history, resumes, drafts, and suggestions as JSON.
 
 AI is disabled by default. Core tracking and editing work without an API key.
 The app does not import job feeds or submit applications.
@@ -88,7 +89,7 @@ dotnet ef migrations has-pending-model-changes --project src/AiCareerDesk.Web
 ```
 
 SQL tests require TEST_SQL_CONNECTION pointing to a disposable SQL Server database.
-Browser tests additionally require RUN_BROWSER_TESTS=true, Chromium installed
+Browser tests additionally require RUN_BROWSER_TESTS=true, Chromium, Firefox, and WebKit installed
 with the built test project's playwright.ps1 script, and Mailpit on ports
 1025/8025. These tests are explicitly skipped when their prerequisites are absent.
 
@@ -100,7 +101,7 @@ Only use synthetic test data in disposable databases.
 ## Remaining milestones
 
 1. Configure and evaluate the [optional AI provider](docs/ai-setup.md).
-2. Complete manual keyboard/screen-reader and additional-browser review.
+2. Complete manual keyboard/screen-reader review.
 3. Deploy with production HTTPS/SMTP/SQL, protected persistent keys, and tested backups.
 
 See [MVP scope](docs/mvp.md) and [implementation tasks](docs/backlog.md).

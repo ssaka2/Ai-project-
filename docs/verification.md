@@ -63,3 +63,15 @@ keyboard/screen-reader review remain open. The dependency advisory scan covers
 NuGet packages; it is not a full security audit or container-image vulnerability scan.
 
 See [setup](full-stack-setup.md), [AI setup](ai-setup.md), and [backlog](backlog.md).
+
+## Follow-up regression coverage
+
+Deletion forms now submit the version that was reviewed. Stale confirmations and
+changes committed by another database context return conflicts instead of deleting
+newer work. Fresh confirmation still permits deletion.
+
+The private JSON export requires sign-in and antiforgery, excludes authentication
+secrets, disables caching, and scopes jobs, history, resumes, drafts, and suggestions
+to the authenticated account. HTTP tests verify ownership and export completeness.
+Browser workflows now include the export download and run on Chromium, Firefox,
+and WebKit. See the current PR checks for these follow-up results.

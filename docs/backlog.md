@@ -5,7 +5,7 @@
 Identity accounts; confirmation, recovery, lockout, and account deletion;
 private job CRUD and status history; base resumes and independent drafts;
 immutable source snapshots; text downloads; optional reviewed AI suggestions;
-optimistic concurrency for all edit forms; SQL migrations; local Docker stack
+optimistic concurrency for edit and deletion forms; private JSON data export; SQL migrations; local Docker stack
 with SMTP inbox and persisted data/keys; automated database, HTTP, browser,
 dependency-audit, and deployment checks.
 
@@ -22,7 +22,7 @@ Fake-provider tests do not establish model factuality.
 
 Review keyboard focus/order, screen-reader labels and errors, contrast, zoom,
 and narrow layouts. Automated Chromium workflows cover desktop/mobile widths,
-but are not a complete accessibility audit. Add Firefox/WebKit verification.
+but are not a complete accessibility audit. Chromium, Firefox, and WebKit workflows are configured in CI.
 
 Acceptance: registration, recovery, tracking, editing, review, and deletion are
 usable by keyboard and with a screen reader; findings are resolved or documented.
@@ -42,7 +42,7 @@ The local Compose stack is not the public hosting configuration.
 
 Before horizontal scaling, replace in-memory AI request limits with shared limits.
 Review registration/recovery abuse controls for the public hosting environment.
-Extend personal-data export to include job records and resume sources if needed.
+Consider streaming/paginated export if account data grows beyond the MVP's in-memory JSON export.
 
 ## Later
 

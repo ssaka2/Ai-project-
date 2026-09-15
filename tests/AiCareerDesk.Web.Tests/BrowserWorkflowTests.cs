@@ -10,20 +10,23 @@ using Xunit;
 using static Microsoft.Playwright.Assertions;
 namespace AiCareerDesk.Web.Tests;
 
-public sealed class BrowserFactAttribute : FactAttribute
+public sealed class BrowserTheoryAttribute : TheoryAttribute
 {
-    public BrowserFactAttribute()
+    public BrowserTheoryAttribute()
     {
         if (Environment.GetEnvironmentVariable("RUN_BROWSER_TESTS") != "true" ||
             string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("TEST_SQL_CONNECTION")))
-            Skip = "Set RUN_BROWSER_TESTS=true and TEST_SQL_CONNECTION, and install Chromium, to run browser checks.";
+            Skip = "Set RUN_BROWSER_TESTS=true and TEST_SQL_CONNECTION, and install Playwright browsers, to run browser checks.";
     }
 }
 
 public class BrowserWorkflowTests
 {
-    [BrowserFact]
-    public async Task ChromiumCompletesPrivateJobAndResumeWorkflowAtDesktopAndMobileWidths()
+    [BrowserTheory]
+    [InlineData("chromium")]
+    [InlineData("firefox")]
+    [InlineData("webkit")]
+    public async Task BrowsersCompletePrivateJobAndResumeWorkflowAtDesktopAndMobileWidths(string browserName)
     {
         var connection = new SqlConnectionStringBuilder(Environment.GetEnvironmentVariable("TEST_SQL_CONNECTION"))
         {
@@ -62,7 +65,7 @@ public class BrowserWorkflowTests
             }
             Assert.True(ready, "Kestrel should start for browser tests.");
             using var playwright = await Playwright.CreateAsync();
-            await using var browser = await playwright.Chromium.LaunchAsync(new() { Headless = true });
+            await using var browser = await (browserName switch { "firefox" => playwright.Firefox, "webkit" => playwright.Webkit, _ => playwright.Chromium }).LaunchAsync(new() { Headless = true });
             await using var aliceContext = await browser.NewContextAsync(new()
             {
                 BaseURL = "http://127.0.0.1:5087", ViewportSize = new() { Width = 1280, Height = 900 }
@@ -128,6 +131,15 @@ public class BrowserWorkflowTests
             await page.GetByRole(AriaRole.Link, new() { Name = "My resumes", Exact = true }).ClickAsync();
             await Expect(page.GetByRole(AriaRole.Heading, new() { Name = "My resumes", Exact = true })).ToBeVisibleAsync();
 
+            await page.GetByRole(AriaRole.Link, new() { Name = "Export my data", Exact = true }).ClickAsync();
+            var export = await page.RunAndWaitForDownloadAsync(() =>
+                page.GetByRole(AriaRole.Button, new() { Name = "Download my data (.json)" }).ClickAsync());
+            await using (var stream = await export.CreateReadStreamAsync())
+            using (var exported = await JsonDocument.ParseAsync(stream!))
+            {
+                Assert.Equal(email, exported.RootElement.GetProperty("Account").GetProperty("Email").GetString());
+                Assert.Equal(1, exported.RootElement.GetProperty("Drafts").GetArrayLength());
+            }
             await using var bobContext = await browser.NewContextAsync(new() { BaseURL = "http://127.0.0.1:5087" });
             var bob = await bobContext.NewPageAsync();
             await Register(bob, "bob-browser-" + Guid.NewGuid().ToString("N") + "@example.test");
