@@ -2,7 +2,8 @@
 """Configure an existing free Azure deployment. Run in the authenticated Cloud Shell.
 
 Creates a dedicated contained SQL user with data-reader/writer roles, tests it,
-and saves only its connection in App Service. Requires the existing build folder.
+and saves only its connection in App Service. Prepares tools in a new Cloud Shell
+session automatically; optionally reuses an existing build folder.
 Does not configure SMTP or claim a healthy deployment. Re-running creates a new
 user; it does not remove existing users or rotate their passwords.
 """
@@ -83,11 +84,37 @@ def run(command, **kwargs):
     return result.stdout
 
 
+def prepare_build(build_dir):
+    if build_dir:
+        existing = Path(build_dir).resolve()
+        if ((existing / "source/src/AiCareerDesk.Web/obj/project.assets.json").is_file()
+                and (existing / "dotnet/dotnet").is_file()):
+            return existing
+    build = Path(tempfile.mkdtemp(prefix="careerdesk-connect-tools-"))
+    print("Preparing tools for this Cloud Shell session...", flush=True)
+    print(f"Tool folder (contains no credentials): {build}", flush=True)
+    run(["git", "clone", "--depth", "1", "--branch", "main",
+         "https://github.com/ssaka2/Ai-project-.git", str(build / "source")])
+    installer = build / "install-dotnet.sh"
+    with urllib.request.urlopen("https://dot.net/v1/dotnet-install.sh", timeout=60) as response:
+        installer.write_bytes(response.read())
+    print("Installing .NET 10; this may take a few minutes...", flush=True)
+    run(["bash", str(installer), "--channel", "10.0", "--quality", "GA",
+         "--install-dir", str(build / "dotnet")])
+    env = os.environ.copy()
+    env["DOTNET_ROOT"] = str(build / "dotnet")
+    env["PATH"] = env["DOTNET_ROOT"] + os.pathsep + env["PATH"]
+    print("Restoring application packages...", flush=True)
+    run(["dotnet", "restore", "src/AiCareerDesk.Web/AiCareerDesk.Web.csproj"],
+        cwd=build / "source", env=env)
+    return build
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--build-dir", required=True)
+    parser.add_argument("--build-dir", help="Optional existing build folder; missing files are prepared automatically")
     args = parser.parse_args()
-    build = Path(args.build_dir).resolve()
+    build = prepare_build(args.build_dir)
     assets = build / "source/src/AiCareerDesk.Web/obj/project.assets.json"
     if not assets.is_file() or not (build / "dotnet/dotnet").is_file():
         raise RuntimeError("Build files are missing. Rebuild in this Cloud Shell session first.")
