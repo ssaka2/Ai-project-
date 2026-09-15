@@ -432,7 +432,9 @@ public class SqlServerWorkflowTests
             new() { ["Consent"] = "true" }, tailor)).StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, (await alice.PostAsync("/Account/Export",
             new FormUrlEncodedContent(new Dictionary<string, string>()))).StatusCode);
-        var export = await Post(alice, "/Account/Export", new());
+        var postedExport = await Post(alice, "/Account/Export", new());
+        Assert.Equal(HttpStatusCode.OK, postedExport.StatusCode);
+        var export = await alice.GetAsync("/Account/Export?handler=Download");
         Assert.Equal(HttpStatusCode.OK, export.StatusCode);
         Assert.Equal("application/json", export.Content.Headers.ContentType!.MediaType);
         Assert.True(export.Headers.CacheControl!.NoStore);

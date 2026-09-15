@@ -37,6 +37,7 @@ public class PageTests
 
     [Theory]
     [InlineData("/Account/Export")]
+    [InlineData("/Account/Export?handler=Download")]
     [InlineData("/Jobs")]
     [InlineData("/Jobs/Create")]
     [InlineData("/Resumes")]

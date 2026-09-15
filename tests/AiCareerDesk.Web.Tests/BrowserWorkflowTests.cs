@@ -139,7 +139,7 @@ public class BrowserWorkflowTests
 
             await page.GetByRole(AriaRole.Link, new() { Name = "Export my data", Exact = true }).ClickAsync();
             var export = await page.RunAndWaitForDownloadAsync(() =>
-                page.GetByRole(AriaRole.Button, new() { Name = "Download my data (.json)" }).ClickAsync());
+                page.GetByRole(AriaRole.Link, new() { Name = "Download my data (.json)" }).ClickAsync());
             await using (var stream = await export.CreateReadStreamAsync())
             using (var exported = await JsonDocument.ParseAsync(stream!))
             {

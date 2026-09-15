@@ -12,7 +12,10 @@ namespace AiCareerDesk.Web.Pages.Account;
 public class ExportModel(ApplicationDbContext db) : PageModel
 {
     public void OnGet() { }
-    public async Task<IActionResult> OnPostAsync(CancellationToken cancellationToken)
+    // Read-only GET supports explicit browser download links; POST remains antiforgery protected.
+    public Task<IActionResult> OnGetDownloadAsync(CancellationToken cancellationToken) => DownloadAsync(cancellationToken);
+    public Task<IActionResult> OnPostAsync(CancellationToken cancellationToken) => DownloadAsync(cancellationToken);
+    private async Task<IActionResult> DownloadAsync(CancellationToken cancellationToken)
     {
         var owner = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
         // Explicitly select account fields: never serialize an IdentityUser.
