@@ -71,4 +71,15 @@ public class PageTests
             new FormUrlEncodedContent(new Dictionary<string, string>()));
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
+
+    [Fact]
+    public async Task MissingPagesReturnAReadable404WithoutLeakingRecordDetails()
+    {
+        await using var factory = Factory();
+        using var client = factory.CreateClient();
+        var response = await client.GetAsync("/missing-test-page");
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.Contains("This page or record is unavailable.", await response.Content.ReadAsStringAsync());
+        Assert.True(response.Headers.CacheControl!.NoStore);
+    }
 }

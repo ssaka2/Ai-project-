@@ -64,6 +64,23 @@ if (!app.Environment.IsDevelopment())
     app.UseExceptionHandler("/Error");
     app.UseHsts();
 }
+app.UseStatusCodePages(async context =>
+{
+    var response = context.HttpContext.Response;
+    var message = response.StatusCode == 404
+        ? "This page or record is unavailable."
+        : "The request could not be completed.";
+    response.ContentType = "text/html; charset=utf-8";
+    response.Headers.CacheControl = "no-store";
+    await response.WriteAsync($"""
+        <!doctype html><html lang="en"><head><meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Request unavailable — AI Career Desk</title><link rel="stylesheet" href="/css/site.css">
+        </head><body><main><h1>{message}</h1>
+        <p>Check the address or return to your dashboard.</p><a href="/">Return home</a>
+        </main></body></html>
+        """);
+});
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();

@@ -112,7 +112,13 @@ public class BrowserWorkflowTests
             await Expect(staleTab.GetByText("This draft changed in another session.", new() { Exact = false })).ToBeVisibleAsync();
             await Expect(staleTab.GetByLabel("Draft text")).ToHaveValueAsync("My stale unsaved text");
             await staleTab.CloseAsync();
+            await page.BringToFrontAsync();
 
+            page.Response += (_, response) =>
+            {
+                if (response.Url.Contains("handler=Download", StringComparison.Ordinal))
+                    System.Console.WriteLine($"Draft download HTTP {response.Status} on {browserName}");
+            };
             var download = await page.RunAndWaitForDownloadAsync(() =>
                 page.GetByRole(AriaRole.Link, new() { Name = "Download saved draft (.txt)" }).ClickAsync());
             await using (var stream = await download.CreateReadStreamAsync())

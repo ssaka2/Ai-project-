@@ -11,7 +11,7 @@
     <label asp-for="Input.Content">Draft text</label><textarea asp-for="Input.Content" rows="22"></textarea>
     <button type="submit">Save changes</button><a asp-page="Index">Back to resumes</a>
 </form>
-<p><a asp-page-handler="Download" asp-route-id="@Model.Draft.Id">Download saved draft (.txt)</a> ·
+<p><a download="resume-draft.txt" asp-page-handler="Download" asp-route-id="@Model.Draft.Id">Download saved draft (.txt)</a> ·
 <a asp-page="Delete" asp-route-id="@Model.Draft.Id" asp-route-draft="true">Delete draft</a></p>
 <details><summary>Original resume snapshot</summary><pre class="snapshot">@Model.Draft.ResumeSnapshot</pre></details>
 <details><summary>Original job description</summary><pre class="snapshot">@Model.Draft.JobDescriptionSnapshot</pre></details>
