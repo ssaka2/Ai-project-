@@ -15,7 +15,7 @@ public class DraftModel(ResumeService resumes) : PageModel
         var draft = await resumes.GetDraftAsync(Owner, id);
         if (draft is null) return NotFound();
         Draft = draft;
-        Input = new DraftInput { Content = draft.Content };
+        Input = new DraftInput { Content = draft.Content, Version = draft.Version };
         return Page();
     }
     public async Task<IActionResult> OnGetDownloadAsync(Guid id)
@@ -30,7 +30,14 @@ public class DraftModel(ResumeService resumes) : PageModel
         if (draft is null) return NotFound();
         Draft = draft;
         if (!ModelState.IsValid) return Page();
-        if (!await resumes.UpdateDraftAsync(Owner, id, Input)) return NotFound();
+        var result = await resumes.UpdateDraftAsync(Owner, id, Input);
+        if (result == WriteResult.NotFound) return NotFound();
+        if (result == WriteResult.Conflict)
+        {
+            Response.StatusCode = StatusCodes.Status409Conflict;
+            ModelState.AddModelError("", "This draft changed in another session. Your submitted text is kept below. Open the latest saved draft in a new tab to compare before retrying.");
+            return Page();
+        }
         return RedirectToPage("Draft", new { id });
     }
 }

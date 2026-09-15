@@ -5,6 +5,8 @@ namespace AiCareerDesk.Web.Models;
 // Only editable fields: clients cannot submit record ownership or audit timestamps.
 public class JobInput : IValidatableObject
 {
+    public Guid Version { get; set; }
+
     [Required, StringLength(200)] public string Title { get; set; } = "";
     [Required, StringLength(200)] public string Company { get; set; } = "";
     [StringLength(200)] public string? Location { get; set; }

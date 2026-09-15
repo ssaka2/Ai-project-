@@ -32,16 +32,16 @@ public class ResumeServiceTests
             draftId = (await resumes.CreateDraftAsync("alice", resumeId, jobId))!.Value;
             Assert.Null(await resumes.GetDraftAsync("bob", draftId));
             Assert.Empty(await resumes.ListDraftsAsync("bob"));
-            Assert.False(await resumes.UpdateDraftAsync("bob", draftId, new DraftInput { Content = "Attack" }));
-            Assert.False(await resumes.DeleteDraftAsync("bob", draftId));
-            Assert.False(await resumes.UpdateAsync("bob", resumeId, new ResumeInput { Name = "Attack", Content = "Attack" }));
-            Assert.False(await resumes.DeleteAsync("bob", resumeId));
-            Assert.True(await resumes.UpdateDraftAsync("alice", draftId, new DraftInput { Content = "Edited draft" }));
+            Assert.Equal(WriteResult.NotFound, await resumes.UpdateDraftAsync("bob", draftId, new DraftInput { Content = "Attack" }));
+            Assert.Equal(WriteResult.NotFound, await resumes.DeleteDraftAsync("bob", draftId, Guid.NewGuid()));
+            Assert.Equal(WriteResult.NotFound, await resumes.UpdateAsync("bob", resumeId, new ResumeInput { Name = "Attack", Content = "Attack" }));
+            Assert.Equal(WriteResult.NotFound, await resumes.DeleteAsync("bob", resumeId, Guid.NewGuid()));
+            Assert.Equal(WriteResult.Saved, await resumes.UpdateDraftAsync("alice", draftId, new DraftInput { Content = "Edited draft", Version = (await resumes.GetDraftAsync("alice", draftId))!.Version }));
             Assert.Equal("Original C# experience", (await resumes.GetAsync("alice", resumeId))!.Content);
-            await resumes.UpdateAsync("alice", resumeId, new ResumeInput { Name = "New", Content = "Changed resume" });
-            await jobs.UpdateAsync("alice", jobId, new JobInput { Title = "New", Company = "Example", Description = "Changed job" });
-            await resumes.DeleteAsync("alice", resumeId);
-            await jobs.DeleteAsync("alice", jobId);
+            await resumes.UpdateAsync("alice", resumeId, new ResumeInput { Version = (await resumes.GetAsync("alice", resumeId))!.Version, Name = "New", Content = "Changed resume" });
+            await jobs.UpdateAsync("alice", jobId, new JobInput { Version = (await jobs.GetAsync("alice", jobId))!.Version, Title = "New", Company = "Example", Description = "Changed job" });
+            await resumes.DeleteAsync("alice", resumeId, (await resumes.GetAsync("alice", resumeId))!.Version);
+            await jobs.DeleteAsync("alice", jobId, (await jobs.GetAsync("alice", jobId))!.Version);
         }
         await using (var db = new ApplicationDbContext(options))
         {
@@ -51,7 +51,7 @@ public class ResumeServiceTests
             Assert.Equal("Original C# experience", draft.ResumeSnapshot);
             Assert.Equal("Original job", draft.JobDescriptionSnapshot);
             Assert.Equal("Edited draft", draft.Content);
-            Assert.True(await resumes.DeleteDraftAsync("alice", draftId));
+            Assert.Equal(WriteResult.Saved, await resumes.DeleteDraftAsync("alice", draftId, (await resumes.GetDraftAsync("alice", draftId))!.Version));
             Assert.Null(await resumes.GetDraftAsync("alice", draftId));
         }
     }
@@ -70,7 +70,9 @@ public class ResumeServiceTests
         var id = await jobs.CreateAsync("alice", input);
         Assert.Empty(await jobs.HistoryAsync("alice", id));
         input.Status = ApplicationStatus.Applied;
+        input.Version = (await jobs.GetAsync("alice", id))!.Version;
         await jobs.UpdateAsync("alice", id, input);
+        input.Version = (await jobs.GetAsync("alice", id))!.Version;
         await jobs.UpdateAsync("alice", id, input);
         var entry = Assert.Single(await jobs.HistoryAsync("alice", id));
         Assert.Equal(ApplicationStatus.Saved, entry.FromStatus);

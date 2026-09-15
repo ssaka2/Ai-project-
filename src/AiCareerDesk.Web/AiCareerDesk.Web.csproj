@@ -6,6 +6,7 @@
     <UserSecretsId>ai-career-desk-development</UserSecretsId>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="MailKit" Version="4.18.0" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.12" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="10.0.12" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.12" />

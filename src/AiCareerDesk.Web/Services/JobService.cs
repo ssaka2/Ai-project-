@@ -33,11 +33,13 @@ public class JobService(ApplicationDbContext db)
         return job.Id;
     }
 
-    public async Task<bool> UpdateAsync(string ownerId, Guid id, JobInput input)
+    public async Task<WriteResult> UpdateAsync(string ownerId, Guid id, JobInput input)
     {
         var job = await Owned(ownerId).SingleOrDefaultAsync(x => x.Id == id);
-        if (job is null) return false;
+        if (job is null) return WriteResult.NotFound;
+        if (job.Version != input.Version) return WriteResult.Conflict;
         var previousStatus = job.Status;
+        job.Version = Guid.NewGuid();
         Apply(job, input);
         if (previousStatus != job.Status)
             db.StatusHistory.Add(new ApplicationStatusHistory
@@ -46,17 +48,31 @@ public class JobService(ApplicationDbContext db)
                 ToStatus = job.Status, ChangedUtc = job.UpdatedUtc
             });
         // EF commits the job update and its history event in one transaction.
-        await db.SaveChangesAsync();
-        return true;
+        try { await db.SaveChangesAsync(); }
+        catch (DbUpdateConcurrencyException)
+        {
+            db.Entry(job).State = EntityState.Detached;
+            foreach (var entry in db.ChangeTracker.Entries<ApplicationStatusHistory>()
+                .Where(x => x.State == EntityState.Added && x.Entity.JobApplicationId == id).ToList())
+                entry.State = EntityState.Detached;
+            return WriteResult.Conflict;
+        }
+        return WriteResult.Saved;
     }
 
-    public async Task<bool> DeleteAsync(string ownerId, Guid id)
+    public async Task<WriteResult> DeleteAsync(string ownerId, Guid id, Guid expectedVersion)
     {
         var job = await Owned(ownerId).SingleOrDefaultAsync(x => x.Id == id);
-        if (job is null) return false;
+        if (job is null) return WriteResult.NotFound;
+        if (job.Version != expectedVersion) return WriteResult.Conflict;
         db.Jobs.Remove(job);
-        await db.SaveChangesAsync();
-        return true;
+        try { await db.SaveChangesAsync(); }
+        catch (DbUpdateConcurrencyException)
+        {
+            db.Entry(job).State = EntityState.Detached;
+            return WriteResult.Conflict;
+        }
+        return WriteResult.Saved;
     }
 
     public async Task<List<ApplicationStatusHistory>> HistoryAsync(string ownerId, Guid id)

@@ -15,10 +15,17 @@ direction follows the owner's earlier requests.
 3. Resumes: private base-text CRUD, independent drafts, immutable source snapshots,
    and text downloads.
 
-## Remaining v0.1 milestones
+4. Optional AI: OpenAI adapter, separate suggestions, gap summaries, consent, limits,
+   timeouts, review/apply flow, and draft conflict detection.
 
-4. AI: provider abstraction, truthful tailoring, skill gaps, timeouts/rate limits.
-5. Release: email confirmation/recovery, deployment, browser/accessibility review.
+5. Account lifecycle: email confirmation/recovery, failed-login lockout, deletion.
+6. Full-stack local packaging: SQL Server, SMTP inbox, migration bundle, persisted keys.
+7. Conflict protection for jobs and base resumes; automated Chromium workflows.
+
+## Remaining v0.1 release milestones
+
+8. Live AI evaluation after provider configuration.
+9. Manual accessibility/additional-browser review and public production deployment.
 
 ## Acceptance criteria
 
@@ -28,13 +35,14 @@ direction follows the owner's earlier requests.
 - Mutations require POST and antiforgery protection.
 - Submitted owner IDs cannot override authenticated ownership.
 - Source edits/deletions do not rewrite existing draft snapshots.
+- Generation never overwrites a draft; acceptance requires review and a matching version.
 - Editing a draft leaves its base resume unchanged.
 - Actual status changes append history in the same transaction.
 - Applied is user-confirmed, never inferred from opening an employer URL.
 - AI failures preserve records; ordinary tracking works without AI credentials.
 
 Automated coverage includes these implemented behaviors against SQLite and/or SQL
-Server. Visual browser usability is still a release check.
+Server. Automated Chromium desktop/mobile workflows run in CI; manual accessibility and additional-browser review remain release checks.
 
 ## Data design
 

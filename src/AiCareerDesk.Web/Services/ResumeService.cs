@@ -34,24 +34,37 @@ public class ResumeService(ApplicationDbContext db)
         await db.SaveChangesAsync();
         return resume.Id;
     }
-    public async Task<bool> UpdateAsync(string owner, Guid id, ResumeInput input)
+    public async Task<WriteResult> UpdateAsync(string owner, Guid id, ResumeInput input)
     {
         var resume = await Owned(owner).SingleOrDefaultAsync(x => x.Id == id);
-        if (resume is null) return false;
+        if (resume is null) return WriteResult.NotFound;
+        if (resume.Version != input.Version) return WriteResult.Conflict;
         Validator.ValidateObject(input, new ValidationContext(input), true);
         resume.Name = input.Name.Trim();
         resume.Content = input.Content;
         resume.UpdatedUtc = DateTime.UtcNow;
-        await db.SaveChangesAsync();
-        return true;
+        resume.Version = Guid.NewGuid();
+        try { await db.SaveChangesAsync(); }
+        catch (DbUpdateConcurrencyException)
+        {
+            db.Entry(resume).State = EntityState.Detached;
+            return WriteResult.Conflict;
+        }
+        return WriteResult.Saved;
     }
-    public async Task<bool> DeleteAsync(string owner, Guid id)
+    public async Task<WriteResult> DeleteAsync(string owner, Guid id, Guid expectedVersion)
     {
         var resume = await Owned(owner).SingleOrDefaultAsync(x => x.Id == id);
-        if (resume is null) return false;
+        if (resume is null) return WriteResult.NotFound;
+        if (resume.Version != expectedVersion) return WriteResult.Conflict;
         db.Resumes.Remove(resume);
-        await db.SaveChangesAsync();
-        return true;
+        try { await db.SaveChangesAsync(); }
+        catch (DbUpdateConcurrencyException)
+        {
+            db.Entry(resume).State = EntityState.Detached;
+            return WriteResult.Conflict;
+        }
+        return WriteResult.Saved;
     }
     public async Task<Guid?> CreateDraftAsync(string owner, Guid resumeId, Guid jobId)
     {
@@ -69,22 +82,35 @@ public class ResumeService(ApplicationDbContext db)
         await db.SaveChangesAsync();
         return draft.Id;
     }
-    public async Task<bool> UpdateDraftAsync(string owner, Guid id, DraftInput input)
+    public async Task<WriteResult> UpdateDraftAsync(string owner, Guid id, DraftInput input)
     {
         var draft = await Drafts(owner).SingleOrDefaultAsync(x => x.Id == id);
-        if (draft is null) return false;
+        if (draft is null) return WriteResult.NotFound;
+        if (draft.Version != input.Version) return WriteResult.Conflict;
         Validator.ValidateObject(input, new ValidationContext(input), true);
         draft.Content = input.Content;
+        draft.Version = Guid.NewGuid();
         draft.UpdatedUtc = DateTime.UtcNow;
-        await db.SaveChangesAsync();
-        return true;
+        try { await db.SaveChangesAsync(); }
+        catch (DbUpdateConcurrencyException)
+        {
+            db.Entry(draft).State = EntityState.Detached;
+            return WriteResult.Conflict;
+        }
+        return WriteResult.Saved;
     }
-    public async Task<bool> DeleteDraftAsync(string owner, Guid id)
+    public async Task<WriteResult> DeleteDraftAsync(string owner, Guid id, Guid expectedVersion)
     {
         var draft = await Drafts(owner).SingleOrDefaultAsync(x => x.Id == id);
-        if (draft is null) return false;
+        if (draft is null) return WriteResult.NotFound;
+        if (draft.Version != expectedVersion) return WriteResult.Conflict;
         db.ResumeDrafts.Remove(draft);
-        await db.SaveChangesAsync();
-        return true;
+        try { await db.SaveChangesAsync(); }
+        catch (DbUpdateConcurrencyException)
+        {
+            db.Entry(draft).State = EntityState.Detached;
+            return WriteResult.Conflict;
+        }
+        return WriteResult.Saved;
     }
 }

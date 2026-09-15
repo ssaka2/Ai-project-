@@ -3,7 +3,10 @@
 @{ ViewData["Title"] = "Delete resume"; }
 <h1>Delete @Model.Name?</h1>
 <p>This record will be permanently removed. Other drafts and their source snapshots are kept.</p>
+<div asp-validation-summary="All" role="alert"></div>
+<p><a asp-page="@(Model.Draft ? "Draft" : "Edit")" asp-route-id="@RouteData.Values["id"]">Review latest record</a></p>
 <form method="post">
+    <input type="hidden" asp-for="ExpectedVersion" />
     <input type="hidden" asp-for="Draft" />
     <button type="submit">Delete</button><a asp-page="Index">Keep it</a>
 </form>

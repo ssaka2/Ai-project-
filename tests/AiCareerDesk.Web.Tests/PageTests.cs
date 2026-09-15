@@ -17,7 +17,7 @@ public class PageTests
                 {
                     ["ConnectionStrings:DefaultConnection"] =
                         "Server=localhost;Database=UnusedPageTests;Integrated Security=true;TrustServerCertificate=true",
-                    ["Database:InitializeDevelopmentDatabase"] = "false"
+                    ["Identity:RequireConfirmedAccount"] = "false"
                 }));
         });
 
@@ -36,11 +36,14 @@ public class PageTests
     }
 
     [Theory]
+    [InlineData("/Account/Export")]
+    [InlineData("/Account/Export?handler=Download")]
     [InlineData("/Jobs")]
     [InlineData("/Jobs/Create")]
     [InlineData("/Resumes")]
     [InlineData("/Resumes/Edit")]
     [InlineData("/Resumes/CreateDraft")]
+    [InlineData("/Resumes/Tailor/00000000-0000-0000-0000-000000000001")]
     [InlineData("/Resumes/Draft/00000000-0000-0000-0000-000000000001")]
     [InlineData("/Resumes/Delete/00000000-0000-0000-0000-000000000001")]
     [InlineData("/Jobs/Edit/00000000-0000-0000-0000-000000000001")]
@@ -68,5 +71,16 @@ public class PageTests
         var response = await client.PostAsync("/Identity/Account/Register",
             new FormUrlEncodedContent(new Dictionary<string, string>()));
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task MissingPagesReturnAReadable404WithoutLeakingRecordDetails()
+    {
+        await using var factory = Factory();
+        using var client = factory.CreateClient();
+        var response = await client.GetAsync("/missing-test-page");
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.Contains("This page or record is unavailable.", await response.Content.ReadAsStringAsync());
+        Assert.True(response.Headers.CacheControl!.NoStore);
     }
 }

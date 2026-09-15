@@ -37,12 +37,13 @@ public class JobServiceTests
             Assert.Single(await service.ListAsync("alice"));
             Assert.Empty(await service.ListAsync("bob"));
             Assert.Null(await service.GetAsync("bob", id));
-            Assert.False(await service.UpdateAsync("bob", id,
+            Assert.Equal(WriteResult.NotFound, await service.UpdateAsync("bob", id,
                 new JobInput { Title = "Changed", Company = "Other" }));
-            Assert.False(await service.DeleteAsync("bob", id));
+            Assert.Equal(WriteResult.NotFound, await service.DeleteAsync("bob", id, Guid.NewGuid()));
             Assert.Equal(".NET Developer", (await service.GetAsync("alice", id))!.Title);
-            Assert.True(await service.UpdateAsync("alice", id, new JobInput
+            Assert.Equal(WriteResult.Saved, await service.UpdateAsync("alice", id, new JobInput
             {
+                Version = (await service.GetAsync("alice", id))!.Version,
                 Title = ".NET Developer", Company = "Example", Status = ApplicationStatus.Applied
             }));
         }
@@ -51,7 +52,7 @@ public class JobServiceTests
             var service = new JobService(db);
             Assert.Single(await service.ListAsync("alice", ApplicationStatus.Applied));
             Assert.Empty(await service.ListAsync("alice", ApplicationStatus.Saved));
-            Assert.True(await service.DeleteAsync("alice", id));
+            Assert.Equal(WriteResult.Saved, await service.DeleteAsync("alice", id, (await service.GetAsync("alice", id))!.Version));
             Assert.Empty(await service.ListAsync("alice"));
         }
     }

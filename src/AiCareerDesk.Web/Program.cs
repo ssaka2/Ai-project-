@@ -1,3 +1,8 @@
+using AiCareerDesk.Web.Services.Email;
+using Microsoft.AspNetCore.Identity.UI.Services;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.Extensions.Options;
+using AiCareerDesk.Web.Services.AI;
 using AiCareerDesk.Web.Data;
 using AiCareerDesk.Web.Services;
 using Microsoft.AspNetCore.Identity;
@@ -13,13 +18,31 @@ builder.Services.AddDbContext<ApplicationDbContext>((services, options) =>
 });
 builder.Services.AddDefaultIdentity<IdentityUser>(options =>
 {
-    // Development foundation: email delivery and confirmation are a release gate.
-    options.SignIn.RequireConfirmedAccount = false;
+    options.SignIn.RequireConfirmedAccount = builder.Configuration.GetValue("Identity:RequireConfirmedAccount", true);
+    options.Lockout.MaxFailedAccessAttempts = 5;
+    options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
     options.User.RequireUniqueEmail = true;
     options.Password.RequiredLength = 12;
 }).AddEntityFrameworkStores<ApplicationDbContext>();
+builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection("Email"));
+builder.Services.AddTransient<IEmailSender, SmtpEmailSender>();
+builder.Services.Configure<DataProtectionTokenProviderOptions>(options => options.TokenLifespan = TimeSpan.FromHours(1));
+var protection = builder.Services.AddDataProtection().SetApplicationName("AiCareerDesk");
+var keyPath = builder.Configuration["DataProtection:KeyPath"];
+if (!string.IsNullOrWhiteSpace(keyPath))
+{
+    Directory.CreateDirectory(keyPath);
+    protection.PersistKeysToFileSystem(new DirectoryInfo(keyPath));
+}
 builder.Services.AddScoped<JobService>();
 builder.Services.AddScoped<ResumeService>();
+builder.Services.Configure<AiOptions>(builder.Configuration.GetSection("AI"));
+builder.Services.AddHttpClient<IResumeTailoringService, OpenAiResumeTailoringService>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(65);
+}).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
+builder.Services.AddSingleton<GenerationGate>();
+builder.Services.AddScoped<TailoringWorkflow>();
 builder.Services.AddRazorPages(options =>
 {
     options.Conventions.AuthorizeFolder("/Jobs");
@@ -30,17 +53,50 @@ var app = builder.Build();
 // Validate after the host has applied all configuration sources.
 if (string.IsNullOrWhiteSpace(app.Configuration.GetConnectionString("DefaultConnection")))
     throw new InvalidOperationException("Set ConnectionStrings:DefaultConnection with user secrets or environment variables.");
+var email = app.Services.GetRequiredService<IOptions<EmailOptions>>().Value;
+if (app.Configuration.GetValue("Identity:RequireConfirmedAccount", true) && !email.IsConfigured)
+    throw new InvalidOperationException("Confirmed accounts require configured SMTP delivery. See docs/full-stack-setup.md.");
+if (email.Enabled && email.SocketOptions == MailKit.Security.SecureSocketOptions.None &&
+    !app.Environment.IsDevelopment() && !app.Environment.IsEnvironment("Testing"))
+    throw new InvalidOperationException("SMTP encryption is required outside development and tests.");
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error");
     app.UseHsts();
 }
+app.UseStatusCodePages(async context =>
+{
+    var response = context.HttpContext.Response;
+    var message = response.StatusCode == 404
+        ? "This page or record is unavailable."
+        : "The request could not be completed.";
+    response.ContentType = "text/html; charset=utf-8";
+    response.Headers.CacheControl = "no-store";
+    await response.WriteAsync($"""
+        <!doctype html><html lang="en"><head><meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Request unavailable — AI Career Desk</title><link rel="stylesheet" href="/css/site.css">
+        </head><body><main><h1>{message}</h1>
+        <p>Check the address or return to your dashboard.</p><a href="/">Return home</a>
+        </main></body></html>
+        """);
+});
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapRazorPages();
+app.MapGet("/health/live", () => Results.Ok(new { status = "ok" }));
+app.MapGet("/health/ready", async (ApplicationDbContext db, CancellationToken token) =>
+{
+    try
+    {
+        return await db.Database.CanConnectAsync(token) && !(await db.Database.GetPendingMigrationsAsync(token)).Any()
+            ? Results.Ok(new { status = "ready" }) : Results.StatusCode(503);
+    }
+    catch { return Results.StatusCode(503); }
+});
 
 app.Run();
 

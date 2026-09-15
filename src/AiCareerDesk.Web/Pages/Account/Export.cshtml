@@ -1,0 +1,7 @@
+@page
+@model AiCareerDesk.Web.Pages.Account.ExportModel
+@{ ViewData["Title"] = "Export my data"; }
+<h1>Export my data</h1>
+<p>Download your account details, jobs, status history, base resumes, drafts, source snapshots, and AI suggestions as JSON.</p>
+<p>The download contains personal information. Store it somewhere private. Passwords, authentication tokens, and server credentials are never included.</p>
+<p><a asp-page-handler="Download" download="ai-career-desk-export.json">Download my data (.json)</a></p>

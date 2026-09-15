@@ -3,6 +3,7 @@ namespace AiCareerDesk.Web.Models;
 
 public class Resume
 {
+    [ConcurrencyCheck] public Guid Version { get; set; } = Guid.NewGuid();
     public Guid Id { get; set; } = Guid.NewGuid();
     [Required, MaxLength(450)] public string OwnerId { get; set; } = "";
     [Required, MaxLength(200)] public string Name { get; set; } = "";
@@ -12,12 +13,15 @@ public class Resume
 
 public class ResumeInput
 {
+    public Guid Version { get; set; }
+
     [Required, StringLength(200)] public string Name { get; set; } = "";
     [Required, StringLength(30000)] public string Content { get; set; } = "";
 }
 
 public class ResumeDraft
 {
+    [ConcurrencyCheck] public Guid Version { get; set; } = Guid.NewGuid();
     public Guid Id { get; set; } = Guid.NewGuid();
     [Required, MaxLength(450)] public string OwnerId { get; set; } = "";
     // Provenance IDs deliberately have no FK: snapshots survive source deletion.
@@ -33,5 +37,7 @@ public class ResumeDraft
 
 public class DraftInput
 {
+    public Guid Version { get; set; }
+
     [Required, StringLength(30000)] public string Content { get; set; } = "";
 }

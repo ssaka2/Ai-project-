@@ -2,7 +2,9 @@
 @model AiCareerDesk.Web.Pages.Jobs.EditModel
 @{ ViewData["Title"] = "Edit job"; }
 <h1>Edit job</h1>
+<p><a href="@Request.Path" target="_blank" rel="noopener">Open latest saved version in a new tab</a></p>
 <form method="post" class="editor">
+    <input type="hidden" asp-for="Input.Version" />
     <div asp-validation-summary="All" class="validation" role="alert"></div>
     <label asp-for="Input.Title"></label><input asp-for="Input.Title" />
     <label asp-for="Input.Company"></label><input asp-for="Input.Company" />

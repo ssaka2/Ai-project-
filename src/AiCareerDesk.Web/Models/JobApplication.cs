@@ -6,6 +6,7 @@ public enum ApplicationStatus { Saved, Applied, Interviewing, Offer, Rejected, W
 
 public class JobApplication
 {
+    [ConcurrencyCheck] public Guid Version { get; set; } = Guid.NewGuid();
     public Guid Id { get; set; } = Guid.NewGuid();
     [Required, MaxLength(450)] public string OwnerId { get; set; } = "";
     [Required, MaxLength(200)] public string Title { get; set; } = "";

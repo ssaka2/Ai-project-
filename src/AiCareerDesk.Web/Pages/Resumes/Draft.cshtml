@@ -2,13 +2,16 @@
 @model AiCareerDesk.Web.Pages.Resumes.DraftModel
 @{ ViewData["Title"] = "Resume draft"; }
 <h1>@Model.Draft.Name</h1>
-<p>This is an editable copy of your resume. Review every claim before using it.</p>
+<p>Review every claim before using this draft.</p>
+<p><a asp-page="Tailor" asp-route-id="@Model.Draft.Id">AI suggestions</a> ·
+<a asp-page="Draft" asp-route-id="@Model.Draft.Id" target="_blank" rel="noopener">Open latest saved draft in a new tab</a></p>
 <form method="post" class="editor">
+    <input type="hidden" asp-for="Input.Version" />
     <div asp-validation-summary="All" class="validation" role="alert"></div>
     <label asp-for="Input.Content">Draft text</label><textarea asp-for="Input.Content" rows="22"></textarea>
     <button type="submit">Save changes</button><a asp-page="Index">Back to resumes</a>
 </form>
-<p><a asp-page-handler="Download" asp-route-id="@Model.Draft.Id">Download saved draft (.txt)</a> ·
+<p><a download="resume-draft.txt" asp-page-handler="Download" asp-route-id="@Model.Draft.Id">Download saved draft (.txt)</a> ·
 <a asp-page="Delete" asp-route-id="@Model.Draft.Id" asp-route-draft="true">Delete draft</a></p>
 <details><summary>Original resume snapshot</summary><pre class="snapshot">@Model.Draft.ResumeSnapshot</pre></details>
 <details><summary>Original job description</summary><pre class="snapshot">@Model.Draft.JobDescriptionSnapshot</pre></details>

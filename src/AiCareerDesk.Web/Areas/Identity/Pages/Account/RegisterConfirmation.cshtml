@@ -1,0 +1,6 @@
+@page
+@{ Layout = "/Pages/Shared/_Layout.cshtml"; ViewData["Title"] = "Check your email"; }
+<h1>Check your email</h1>
+<p>Use the confirmation link in your inbox before signing in.</p>
+<p><a asp-area="Identity" asp-page="/Account/ResendEmailConfirmation">Resend confirmation email</a></p>
+<p><a asp-area="Identity" asp-page="/Account/Login">Sign in</a></p>
