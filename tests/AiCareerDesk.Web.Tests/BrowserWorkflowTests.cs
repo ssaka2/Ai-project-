@@ -96,11 +96,16 @@ public class BrowserWorkflowTests
             await page.GetByLabel("Resume name").FillAsync("Browser base");
             await page.GetByLabel("Resume text").FillAsync("C# developer\n<script>window.resumeInjected=true</script>");
             await page.GetByRole(AriaRole.Button, new() { Name = "Save resume", Exact = true }).ClickAsync();
+            await Expect(page.GetByRole(AriaRole.Heading, new() { Name = "My resumes", Exact = true })).ToBeVisibleAsync();
+            await Expect(page.GetByRole(AriaRole.Link, new() { Name = "Browser base", Exact = true })).ToBeVisibleAsync();
             await page.GotoAsync("/Resumes/CreateDraft");
             await page.GetByLabel("Base resume").SelectOptionAsync(new SelectOptionValue { Label = "Browser base" });
             await page.GetByLabel("Job", new() { Exact = true }).SelectOptionAsync(new SelectOptionValue { Label = "Browser developer — Example" });
             await page.GetByRole(AriaRole.Button, new() { Name = "Create editable draft" }).ClickAsync();
-            await page.WaitForURLAsync("**/Resumes/Draft/**");
+            // The editor is our readiness signal; unrelated load events can stall Firefox.
+            await page.WaitForURLAsync("**/Resumes/Draft/**", new() { WaitUntil = WaitUntilState.Commit });
+            await Expect(page.GetByLabel("Draft text")).ToBeVisibleAsync();
+            await Expect(page.GetByLabel("Draft text")).ToHaveValueAsync("C# developer\n<script>window.resumeInjected=true</script>");
             var draftUrl = page.Url;
             var staleTab = await aliceContext.NewPageAsync();
             await staleTab.GotoAsync(draftUrl);
