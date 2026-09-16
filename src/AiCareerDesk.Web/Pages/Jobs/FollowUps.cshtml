@@ -1,0 +1,30 @@
+@page
+@model AiCareerDesk.Web.Pages.Jobs.FollowUpsModel
+@using AiCareerDesk.Web.Services
+@{ ViewData["Title"] = "Follow-ups"; }
+<h1>Follow-up reminders</h1>
+<p>Suggested reminders appear 7 days after an Applied record's last update, or 3 days after an Interviewing record's last update. Dates use UTC. Editing the record restarts that interval.</p>
+<p>Review each draft and the employer's instructions before sending it yourself. Messages are never sent automatically.</p>
+<h2>Due now (@Model.Due.Count)</h2>
+@if (Model.Due.Count == 0)
+{
+    <p>No follow-ups due. Mark a saved job Applied when you submit your application.</p>
+}
+@foreach (var job in Model.Due)
+{
+    <article class="job">
+        <h3>@job.Title — @job.Company</h3>
+        <p>Suggested follow-up: @ApplicationAutomation.FollowUpDate(job)?.ToString("yyyy-MM-dd") UTC · @job.Status</p>
+        <details><summary>Review follow-up draft</summary>
+            <label for="draft-@job.Id">Select and copy this draft</label>
+            <textarea id="draft-@job.Id" rows="9" readonly>@ApplicationAutomation.Draft(job)</textarea>
+        </details>
+        <a asp-page="Edit" asp-route-id="@job.Id">Update status or record your follow-up in notes</a>
+    </article>
+}
+<h2>Upcoming (@Model.Upcoming.Count)</h2>
+@foreach (var job in Model.Upcoming)
+{
+    <p><a asp-page="Edit" asp-route-id="@job.Id">@job.Title — @job.Company</a> · @ApplicationAutomation.FollowUpDate(job)?.ToString("yyyy-MM-dd") UTC</p>
+}
+<a asp-page="Index">Back to dashboard</a>

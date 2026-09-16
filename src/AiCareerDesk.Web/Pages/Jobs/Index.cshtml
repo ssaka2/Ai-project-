@@ -10,14 +10,17 @@
     <a asp-page="Index" asp-route-status="@item.Key"><strong>@item.Value</strong> @item.Key</a>
 }
 </div>
+<p><a asp-page="FollowUps">Follow-ups due: @Model.DueCount</a> · <a asp-page-handler="Export" asp-route-status="@Model.Status" asp-route-search="@Model.Search">Download filtered applications (CSV)</a></p>
 <form method="get" class="filter">
+    <label asp-for="Search">Search title, company or location</label>
+    <input asp-for="Search" type="search" maxlength="200" />
     <label asp-for="Status">Filter by status</label>
     <select asp-for="Status" asp-items="Html.GetEnumSelectList<ApplicationStatus>()"><option value="">All statuses</option></select>
     <button type="submit">Filter</button><a asp-page="Index">Clear</a>
 </form>
 @if (Model.Items.Count == 0)
 {
-    <p>No jobs here yet. Save an opportunity to start tracking it.</p>
+    <p>No applications match this view. Clear the filters or save an opportunity to start tracking it.</p>
 }
 @foreach (var job in Model.Items)
 {

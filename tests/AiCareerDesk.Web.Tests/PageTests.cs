@@ -40,6 +40,8 @@ public class PageTests
     [InlineData("/Account/Export?handler=Download")]
     [InlineData("/Jobs")]
     [InlineData("/Jobs/Create")]
+    [InlineData("/Jobs/FollowUps")]
+    [InlineData("/Jobs?handler=Export")]
     [InlineData("/Resumes")]
     [InlineData("/Resumes/Edit")]
     [InlineData("/Resumes/CreateDraft")]
