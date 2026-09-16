@@ -3,6 +3,15 @@
 A full-stack C# / ASP.NET Core application for organizing IT job applications
 and preparing job-specific resume drafts.
 
+## Portfolio projects
+
+Explore two additional runnable projects in the [software engineering portfolio](portfolio/README.md):
+
+- [Inventory Ledger](portfolio/inventory-ledger/) — transaction-safe stock movements, audit history, and retry protection.
+- [Airport Operations Analytics](portfolio/airport-analytics/) — validated CSV ingestion, repeatable SQL loads, and airport performance reports.
+
+Both include automated tests, synthetic examples, and documented design decisions.
+
 ## What you can do
 
 - Register, confirm email, sign in, recover a password, and delete your account.

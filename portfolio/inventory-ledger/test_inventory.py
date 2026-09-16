@@ -1,0 +1,64 @@
+import tempfile
+import unittest
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+from inventory import connect, add_product, move, report
+
+
+class InventoryTests(unittest.TestCase):
+    def setUp(self):
+        self.directory = tempfile.TemporaryDirectory()
+        self.path = str(Path(self.directory.name) / 'test.db')
+        self.db = connect(self.path)
+        add_product(self.db, 'USB', 'USB hub', 2)
+
+    def tearDown(self):
+        self.db.close()
+        self.directory.cleanup()
+
+    def test_retry_is_idempotent(self):
+        self.assertTrue(move(self.db, 'USB', 10, 'receipt-1'))
+        self.assertFalse(move(self.db, 'USB', 10, 'receipt-1'))
+        self.assertEqual(report(self.db)[0]['stock'], 10)
+
+    def test_insufficient_stock_rolls_back(self):
+        move(self.db, 'USB', 2, 'receipt')
+        with self.assertRaises(ValueError):
+            move(self.db, 'USB', -3, 'sale')
+        self.assertEqual(report(self.db)[0]['stock'], 2)
+        self.assertEqual(self.db.execute('SELECT count(*) FROM movements').fetchone()[0], 1)
+
+    def test_conflicting_request_rejected(self):
+        move(self.db, 'USB', 5, 'same')
+        with self.assertRaises(ValueError):
+            move(self.db, 'USB', 6, 'same')
+        self.assertEqual(report(self.db)[0]['stock'], 5)
+
+    def test_low_stock_boundary(self):
+        move(self.db, 'USB', 2, 'receipt')
+        self.assertEqual(len(report(self.db, True)), 1)
+        move(self.db, 'USB', 1, 'receipt-2')
+        self.assertEqual(report(self.db, True), [])
+
+    def test_concurrent_sales_cannot_oversell(self):
+        move(self.db, 'USB', 1, 'receipt')
+        def sell(index):
+            db = connect(self.path)
+            try:
+                return move(db, 'USB', -1, f'sale-{index}')
+            except ValueError:
+                return False
+            finally:
+                db.close()
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            self.assertEqual(sum(pool.map(sell, range(2))), 1)
+        self.assertEqual(report(self.db)[0]['stock'], 0)
+
+    def test_invalid_and_unknown_movements(self):
+        for sku, delta, key in [('USB', 0, 'x'), ('USB', 1, ''), ('NO', 1, 'x')]:
+            with self.assertRaises(ValueError):
+                move(self.db, sku, delta, key)
+
+
+if __name__ == '__main__':
+    unittest.main()
