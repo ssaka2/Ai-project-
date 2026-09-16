@@ -1,5 +1,7 @@
 import tempfile
 import unittest
+import subprocess
+import sys
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from inventory import connect, add_product, move, report
@@ -58,6 +60,25 @@ class InventoryTests(unittest.TestCase):
         for sku, delta, key in [('USB', 0, 'x'), ('USB', 1, ''), ('NO', 1, 'x')]:
             with self.assertRaises(ValueError):
                 move(self.db, sku, delta, key)
+
+    def test_stock_overflow_preserves_integer_balance(self):
+        move(self.db, 'USB', 2**63 - 1, 'maximum')
+        with self.assertRaises(ValueError):
+            move(self.db, 'USB', 1, 'overflow')
+        self.assertEqual(report(self.db)[0]['stock'], 2**63 - 1)
+        self.assertEqual(self.db.execute('SELECT count(*) FROM movements').fetchone()[0], 1)
+
+    def test_out_of_range_quantity_is_rejected(self):
+        with self.assertRaises(ValueError):
+            move(self.db, 'USB', 2**63, 'too-large')
+
+    def test_invalid_database_path_has_clean_cli_error(self):
+        result = subprocess.run([sys.executable, str(Path(__file__).with_name('inventory.py')),
+            '--db', str(Path(self.directory.name) / 'missing' / 'test.db'), 'list'],
+            capture_output=True, text=True)
+        self.assertEqual(result.returncode, 2)
+        self.assertIn('Error:', result.stderr)
+        self.assertNotIn('Traceback', result.stderr)
 
 
 if __name__ == '__main__':

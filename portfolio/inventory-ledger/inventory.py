@@ -32,8 +32,8 @@ def add_product(db, sku, name, reorder_point=5):
 
 
 def move(db, sku, delta, request_id):
-    if type(delta) is not int or delta == 0 or not request_id.strip():
-        raise ValueError('A nonzero integer quantity and request ID are required')
+    if type(delta) is not int or not -(2**63) < delta < 2**63 or delta == 0 or not request_id.strip():
+        raise ValueError('A nonzero signed 64-bit quantity and request ID are required')
     # A reserved write lock serializes check-and-update across CLI processes.
     with db:
         db.execute('BEGIN IMMEDIATE')
@@ -43,10 +43,11 @@ def move(db, sku, delta, request_id):
             if tuple(existing) != (sku, delta):
                 raise ValueError('Request ID already belongs to another movement')
             return False
-        changed = db.execute('UPDATE products SET stock=stock+? WHERE sku=? AND stock+? >= 0',
-                             (delta, sku, delta)).rowcount
+        changed = db.execute('''UPDATE products SET stock=stock+?
+            WHERE sku=? AND stock+? >= 0 AND stock <= ?''',
+                             (delta, sku, delta, (2**63 - 1) - max(delta, 0))).rowcount
         if not changed:
-            raise ValueError('Unknown SKU or insufficient stock')
+            raise ValueError('Unknown SKU, insufficient stock, or stock limit exceeded')
         db.execute('INSERT INTO movements(request_id,sku,delta) VALUES (?,?,?)',
                    (request_id, sku, delta))
     return True
@@ -75,8 +76,9 @@ def main():
     listing.add_argument('--low-stock', action='store_true')
     commands.add_parser('history').add_argument('sku')
     args = parser.parse_args()
-    db = connect(args.db)
+    db = None
     try:
+        db = connect(args.db)
         if args.command == 'add':
             add_product(db, args.sku, args.name, args.reorder_point)
             result = {'created': args.sku}
@@ -88,10 +90,11 @@ def main():
         else:
             result = report(db, args.low_stock)
         print(json.dumps(result, indent=2))
-    except (ValueError, sqlite3.Error) as exc:
+    except (ValueError, OverflowError, sqlite3.Error) as exc:
         parser.exit(2, f'Error: {exc}\n')
     finally:
-        db.close()
+        if db is not None:
+            db.close()
 
 
 if __name__ == '__main__':

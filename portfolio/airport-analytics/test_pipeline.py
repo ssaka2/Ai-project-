@@ -1,6 +1,8 @@
 import sqlite3
 import tempfile
 import unittest
+import subprocess
+import sys
 from pathlib import Path
 from pipeline import FIELDS, load, report
 
@@ -59,6 +61,14 @@ class PipelineTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             load(self.db, self.csv)
         self.assertEqual(report(self.db)[0]['total_flights'], 1)
+
+    def test_invalid_database_path_has_clean_cli_error(self):
+        result = subprocess.run([sys.executable, str(Path(__file__).with_name('pipeline.py')),
+            str(self.csv), '--db', str(Path(self.tmp.name) / 'missing' / 'test.db')],
+            capture_output=True, text=True)
+        self.assertEqual(result.returncode, 2)
+        self.assertIn('Error:', result.stderr)
+        self.assertNotIn('Traceback', result.stderr)
 
 
 if __name__ == '__main__':

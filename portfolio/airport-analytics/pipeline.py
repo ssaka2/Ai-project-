@@ -70,14 +70,16 @@ def main():
     parser.add_argument('source', type=Path)
     parser.add_argument('--db', default='flights.db')
     args = parser.parse_args()
-    db = sqlite3.connect(args.db)
+    db = None
     try:
+        db = sqlite3.connect(args.db)
         quality = load(db, args.source)
         print(json.dumps({'quality': quality, 'airports': report(db)}, indent=2))
     except (OSError, ValueError, sqlite3.Error) as exc:
         parser.exit(2, f'Error: {exc}\n')
     finally:
-        db.close()
+        if db is not None:
+            db.close()
 
 
 if __name__ == '__main__':
