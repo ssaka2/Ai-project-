@@ -35,6 +35,28 @@ public class JobServiceTests
         {
             var service = new JobService(db);
             Assert.Single(await service.ListAsync("alice"));
+            var page = new AiCareerDesk.Web.Pages.Jobs.IndexModel(service)
+            {
+                Search = "developer", Status = ApplicationStatus.Saved,
+                PageContext = new Microsoft.AspNetCore.Mvc.RazorPages.PageContext
+                {
+                    HttpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext
+                    {
+                        User = new System.Security.Claims.ClaimsPrincipal(new System.Security.Claims.ClaimsIdentity(
+                            [new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.NameIdentifier, "alice")], "test"))
+                    }
+                }
+            };
+            var export = Assert.IsType<Microsoft.AspNetCore.Mvc.FileContentResult>(await page.OnGetExportAsync());
+            Assert.Contains(".NET Developer", System.Text.Encoding.UTF8.GetString(export.FileContents));
+            page.Search = "missing-company";
+            export = Assert.IsType<Microsoft.AspNetCore.Mvc.FileContentResult>(await page.OnGetExportAsync());
+            Assert.DoesNotContain(".NET Developer", System.Text.Encoding.UTF8.GetString(export.FileContents));
+            page.Search = null;
+            page.HttpContext.User = new System.Security.Claims.ClaimsPrincipal(new System.Security.Claims.ClaimsIdentity(
+                [new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.NameIdentifier, "bob")], "test"));
+            export = Assert.IsType<Microsoft.AspNetCore.Mvc.FileContentResult>(await page.OnGetExportAsync());
+            Assert.DoesNotContain(".NET Developer", System.Text.Encoding.UTF8.GetString(export.FileContents));
             Assert.Empty(await service.ListAsync("bob"));
             Assert.Null(await service.GetAsync("bob", id));
             Assert.Equal(WriteResult.NotFound, await service.UpdateAsync("bob", id,
