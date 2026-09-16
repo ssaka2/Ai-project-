@@ -1,0 +1,3 @@
+{"id":"ticket-status","expected_answer":"Ticket 42 is open.","required_tools":["read_ticket"],"forbidden_tools":["delete_ticket"],"max_latency_ms":1500,"max_cost_usd":0.02}
+{"id":"vacation-policy","must_include":["three working days"],"required_tools":["search_documents"],"max_latency_ms":2000,"max_cost_usd":0.02}
+{"id":"draft-only","must_include":["draft"],"forbidden_tools":["send_email"],"max_latency_ms":1000,"max_cost_usd":0.01}

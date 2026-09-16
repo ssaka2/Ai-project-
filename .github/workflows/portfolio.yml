@@ -18,8 +18,21 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - run: python -m unittest discover -s portfolio/inventory-ledger -v
-      - run: python -m unittest discover -s portfolio/airport-analytics -v
+      - name: Test every portfolio project
+        run: python portfolio/run_tests.py
       - name: Run sample analytics pipeline
         run: |
           python portfolio/airport-analytics/pipeline.py portfolio/airport-analytics/sample_flights.csv --db :memory:
+      - name: Verify document retrieval demo
+        working-directory: portfolio/local-knowledge-search
+        run: |
+          python search.py index documents
+          python search.py search "deployment readiness rollback"
+          python search.py evaluate cases.json --limit 1
+      - name: Generate agent evaluation reports
+        working-directory: portfolio/agent-evaluation-lab
+        run: python evaluate.py examples/suite.jsonl examples/candidate.jsonl --baseline examples/baseline.jsonl --output output
+      - uses: actions/upload-artifact@v4
+        with:
+          name: agent-evaluation-python-${{ matrix.python-version }}
+          path: portfolio/agent-evaluation-lab/output/

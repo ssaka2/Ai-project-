@@ -1,0 +1,5 @@
+[
+  {"query": "deployment readiness rollback", "expected_sources": ["deployment.md"]},
+  {"query": "stock movement identifier", "expected_sources": ["inventory.md"]},
+  {"query": "vacation leave portal", "expected_sources": ["leave-policy.md"]}
+]

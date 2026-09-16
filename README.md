@@ -5,12 +5,15 @@ and preparing job-specific resume drafts.
 
 ## Portfolio projects
 
-Explore two additional runnable projects in the [software engineering portfolio](portfolio/README.md):
+Explore four additional runnable projects in the [software engineering portfolio](portfolio/README.md):
 
 - [Inventory Ledger](portfolio/inventory-ledger/) — transaction-safe stock movements, audit history, and retry protection.
 - [Airport Operations Analytics](portfolio/airport-analytics/) — validated CSV ingestion, repeatable SQL loads, and airport performance reports.
+- [Local Knowledge Search](portfolio/local-knowledge-search/) — offline BM25 retrieval with source citations and relevance checks.
+- [Agent Evaluation Lab](portfolio/agent-evaluation-lab/) — recorded AI response grading, baseline regression gates, and HTML reports.
 
-Both include automated tests, synthetic examples, and documented design decisions.
+All four include automated tests, synthetic examples, and documented design decisions.
+Run every portfolio test with `python portfolio/run_tests.py`.
 
 ## What you can do
 
@@ -123,3 +126,4 @@ are outside this version.
 ## License
 
 No license has been selected.
+
