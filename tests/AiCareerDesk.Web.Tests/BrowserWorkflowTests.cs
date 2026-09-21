@@ -73,6 +73,9 @@ public class BrowserWorkflowTests
             var page = await aliceContext.NewPageAsync();
             var pageErrors = new List<string>();
             page.PageError += (_, error) => pageErrors.Add(error);
+            await aliceContext.Tracing.StartAsync(new() { Screenshots = true, Snapshots = true });
+            try
+            {
             var email = "browser-" + Guid.NewGuid().ToString("N") + "@example.test";
             await Register(page, email);
             await page.GotoAsync("/Jobs/Create");
@@ -178,6 +181,17 @@ public class BrowserWorkflowTests
             await page.GotoAsync(draftUrl);
             await Expect(page.GetByLabel("Draft text")).ToHaveValueAsync("Saved browser draft");
             Assert.Empty(pageErrors);
+            }
+            catch
+            {
+                var artifacts = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../../TestResults"));
+                Directory.CreateDirectory(artifacts);
+                Console.WriteLine($"Browser failure on {browserName}: {page.Url}");
+                await File.WriteAllTextAsync(Path.Combine(artifacts, $"{browserName}-failure.html"), await page.ContentAsync());
+                await page.ScreenshotAsync(new() { Path = Path.Combine(artifacts, $"{browserName}-failure.png"), FullPage = true });
+                await aliceContext.Tracing.StopAsync(new() { Path = Path.Combine(artifacts, $"{browserName}-trace.zip") });
+                throw;
+            }
         }
         finally
         {
