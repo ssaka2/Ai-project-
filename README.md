@@ -5,15 +5,17 @@ and preparing job-specific resume drafts.
 
 ## Portfolio projects
 
-Explore four additional runnable projects in the [software engineering portfolio](portfolio/README.md):
+Explore six additional runnable projects in the [software engineering portfolio](portfolio/README.md):
 
 - [Inventory Ledger](portfolio/inventory-ledger/) — transaction-safe stock movements, audit history, and retry protection.
 - [Airport Operations Analytics](portfolio/airport-analytics/) — validated CSV ingestion, repeatable SQL loads, and airport performance reports.
 - [Local Knowledge Search](portfolio/local-knowledge-search/) — offline BM25 retrieval with source citations and relevance checks.
 - [Agent Evaluation Lab](portfolio/agent-evaluation-lab/) — recorded AI response grading, baseline regression gates, and HTML reports.
+- [Support Ticket API](portfolio/support-ticket-api/) — C# REST API with persistent status history and stale-edit protection.
+- [Durable Job Queue](portfolio/durable-job-queue/) — restart-safe jobs, worker leases, retry backoff, and dead letters.
 
-All four include automated tests, synthetic examples, and documented design decisions.
-Run every portfolio test with `python portfolio/run_tests.py`.
+All six include automated tests, synthetic examples, and documented design decisions.
+Run the Python portfolio tests with `python portfolio/run_tests.py`, and the C# API integration checks with `python portfolio/support-ticket-api/verify_api.py`.
 
 ## What you can do
 

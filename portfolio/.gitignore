@@ -5,3 +5,6 @@ __pycache__/
 *.db-wal
 *.db-shm
 output/
+bin/
+obj/
+data/

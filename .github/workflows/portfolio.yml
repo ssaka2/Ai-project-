@@ -36,3 +36,16 @@ jobs:
         with:
           name: agent-evaluation-python-${{ matrix.python-version }}
           path: portfolio/agent-evaluation-lab/output/
+  support-ticket-api:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Build API and verify HTTP behavior and restart persistence
+        run: python portfolio/support-ticket-api/verify_api.py

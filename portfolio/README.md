@@ -11,10 +11,12 @@ Runnable projects demonstrating backend logic, relational data modeling, documen
 | [Airport Analytics](airport-analytics/) | Python, CSV, SQLite, SQL | Validated ingestion, repeatable loads, operational metrics |
 | [Local Knowledge Search](local-knowledge-search/) | Python, SQLite FTS5, BM25 | Offline retrieval, source citations, relevance evaluation |
 | [Agent Evaluation Lab](agent-evaluation-lab/) | Python, JSONL, HTML | Response/trace checks, budget limits, regression gates |
+| [Support Ticket API](support-ticket-api/) | C#, .NET 10, ASP.NET Core | REST endpoints, optimistic concurrency, persistent history |
+| [Durable Job Queue](durable-job-queue/) | Python, SQLite | Worker leases, retries, idempotency, dead letters |
 
 ## Quick start
 
-Install Python 3.11 or newer. The four standalone projects use only the standard library. Knowledge Search also requires SQLite built with FTS5, which is verified by its tests.
+Install Python 3.11 or newer. The five Python projects use only the standard library. Support Ticket API additionally requires the .NET 10 SDK. Knowledge Search also requires SQLite built with FTS5, which is verified by its tests.
 
 ```sh
 git clone https://github.com/ssaka2/Ai-project-.git
@@ -22,6 +24,8 @@ cd Ai-project-
 python portfolio/run_tests.py
 python portfolio/airport-analytics/pipeline.py portfolio/airport-analytics/sample_flights.csv --db :memory:
 ```
+
+Run the C# API integration checks separately with `python portfolio/support-ticket-api/verify_api.py`.
 
 Each project has its own entry point, test suite, setup instructions, design decisions, and limitations. They can be extracted into separate repositories without depending on CareerDesk.
 
@@ -35,8 +39,8 @@ Each project has its own entry point, test suite, setup instructions, design dec
 
 ## Current AI engineering themes
 
-The two newest projects demonstrate retrieval and agent evaluation, motivated by [contextual retrieval engineering](https://www.anthropic.com/engineering/contextual-retrieval) and [agent evaluation practices published in January 2026](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents). These are topic choices, not a claim that these repositories appear on GitHub Trending.
+The two AI-focused projects demonstrate retrieval and agent evaluation, motivated by [contextual retrieval engineering](https://www.anthropic.com/engineering/contextual-retrieval) and [agent evaluation practices published in January 2026](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents). These are topic choices, not a claim that these repositories appear on GitHub Trending.
 
-The portfolio workflow tests all four projects on Python 3.11, 3.12, and 3.13 and publishes downloadable example evaluation reports as workflow artifacts. AI CareerDesk has its own .NET/SQL Server/browser/Docker workflow.
+The portfolio workflow tests all five Python projects on Python 3.11, 3.12, and 3.13 and publishes downloadable example evaluation reports as workflow artifacts. A separate job builds the Support Ticket API and runs 13 HTTP integration checks. AI CareerDesk has its own .NET/SQL Server/browser/Docker workflow.
 
 These are portfolio demonstrations. No production use, performance benchmarks, or business impact is claimed. No license has been selected; the parent repository's licensing status applies.
