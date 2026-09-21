@@ -62,7 +62,7 @@ jobs:
           exit 1
       - name: Start local SMTP inbox
         run: |
-          docker run -d --name career-mailpit -p 127.0.0.1:1025:1025 -p 127.0.0.1:8025:8025 axllent/mailpit:v1.27
+          docker run -d --name career-mailpit -p 127.0.0.1:1025:1025 -p 127.0.0.1:8025:8025 axllent/mailpit:v1.31.2
           curl --retry 20 --retry-all-errors --retry-delay 1 --fail --silent http://127.0.0.1:8025/api/v1/messages > /dev/null
       - name: Run service, SQL Server, and browser verification
         env:

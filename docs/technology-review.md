@@ -24,7 +24,7 @@ This update covers the repository's seven existing projects and adds one new Typ
 ## Reproduce verification
 
 ```sh
-python -m pip install -r portfolio/mcp-knowledge-tools/requirements.txt
+python -m pip install -r portfolio/mcp-knowledge-tools/requirements.txt -r portfolio/ai-response-contract-lab/requirements.txt
 python portfolio/run_tests.py
 python portfolio/support-ticket-api/verify_api.py
 node --test portfolio/signed-webhook-receiver/test_server.ts
@@ -48,3 +48,11 @@ The Ollama gateway now aborts its upstream HTTP request when its caller disconne
 Verification covers 59 Python tests across six projects, 16 TypeScript HTTP tests, the C# ticket API checks, and CareerDesk's build, migrations, dependency advisory audit, service/SQL/browser tests, and Docker restart checks. CI is the authority for the upgraded .NET toolchain. Live cloud deployments, Gmail/Google OAuth credentials, paid AI APIs, and actual local Ollama inference are outside these fixture-backed checks.
 
 Version references: [Playwright package](https://www.nuget.org/packages/Microsoft.Playwright/1.62.0), [.NET test SDK](https://www.nuget.org/packages/Microsoft.NET.Test.Sdk/18.10.1), [xUnit adapter release notes](https://xunit.net/releases/visualstudio/4.0.0).
+
+## Current dependency review — twelve projects
+
+Checked the package registries and upstream release APIs on September 21, 2026. No open dependency update PRs remained. MCP 2.2.0, jsonschema 4.26.0, MailKit 4.18.0, Microsoft packages and dotnet-ef 10.0.12, Playwright 1.62.0, .NET Test SDK 18.10.1, xunit 2.9.3, and the Visual Studio adapter 4.0.0 match the stable versions returned by their registries. The existing GitHub Actions major tags already track the current supported release majors.
+
+Updated the local SMTP test inbox from Mailpit v1.27 to [v1.31.2](https://github.com/axllent/mailpit/releases/tag/v1.31.2) in both Docker Compose and CI. The exact patch tag keeps both environments consistent. The full workflow verifies email confirmation and password recovery against this version, plus Docker readiness and restart.
+
+The collection now includes AI Response Contract Lab and Agent Memory Store: twelve projects, with 73 Python tests across eight suites, 16 TypeScript tests, 13 ticket API checks, and 66 CareerDesk tests. The earlier sections record prior updates and their counts at that time. Actual model inference and production deployments still require separate verification.
