@@ -19,6 +19,8 @@ Runnable projects demonstrating backend logic, relational data modeling, documen
 | [AI Response Contract Lab](ai-response-contract-lab/) | Python, JSON Schema, Ollama | Model contracts, response validation, HTTP adapter |
 | [Agent Memory Store](agent-memory-store/) | Python, SQLite | Persistent context, provenance, expiration, lexical recall |
 
+| [AI Engineering Web Lab](ai-engineering-web-lab/) | JavaScript, static hosting | Interactive recorded-response checks and downloadable reports |
+
 ## Quick start
 
 Install Python 3.11 or newer. Six Python projects use only the standard library; MCP Knowledge Tools additionally requires the pinned MCP SDK. AI Response Contract Lab requires the pinned jsonschema dependency. Support Ticket API additionally requires the .NET 10 SDK. Knowledge Search also requires SQLite built with FTS5, which is verified by its tests.

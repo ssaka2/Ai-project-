@@ -87,3 +87,18 @@ jobs:
         run: |
           npm test
           npm run demo
+
+  ai-engineering-web-lab:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Check browser evaluator syntax and rules
+        working-directory: portfolio/ai-engineering-web-lab
+        run: |
+          node --check dist/app.js
+          node --test test-evaluate.mjs
