@@ -161,13 +161,15 @@ public class BrowserWorkflowTests
             await page.GotoAsync("/Identity/Account/ForgotPassword");
             await page.GetByLabel("Email", new() { Exact = true }).FillAsync(email);
             await page.Locator("main form button[type=submit]").ClickAsync();
-            await page.WaitForURLAsync("**/Identity/Account/ForgotPasswordConfirmation");
+            await page.WaitForURLAsync("**/Identity/Account/ForgotPasswordConfirmation", new() { WaitUntil = WaitUntilState.Commit });
+            await Expect(page.GetByRole(AriaRole.Heading, new() { Name = "Forgot password confirmation", Exact = true })).ToBeVisibleAsync();
             await page.GotoAsync(await EmailLink(email, "Reset"));
             await page.GetByLabel("Email", new() { Exact = true }).FillAsync(email);
             await page.GetByLabel("Password", new() { Exact = true }).FillAsync("Browser-Replacement42!");
             await page.GetByLabel(new Regex("^Confirm password$", RegexOptions.IgnoreCase)).FillAsync("Browser-Replacement42!");
             await page.Locator("main form button[type=submit]").ClickAsync();
-            await page.WaitForURLAsync("**/Identity/Account/ResetPasswordConfirmation");
+            await page.WaitForURLAsync("**/Identity/Account/ResetPasswordConfirmation", new() { WaitUntil = WaitUntilState.Commit });
+            await Expect(page.GetByRole(AriaRole.Heading, new() { Name = "Reset password confirmation", Exact = true })).ToBeVisibleAsync();
             await page.GotoAsync("/Identity/Account/Login");
             await page.GetByLabel("Email", new() { Exact = true }).FillAsync(email);
             await page.GetByLabel("Password", new() { Exact = true }).FillAsync("Browser-Replacement42!");
