@@ -14,7 +14,6 @@ Runnable projects demonstrating backend logic, relational data modeling, documen
 | [Support Ticket API](support-ticket-api/) | C#, .NET 10, ASP.NET Core | REST endpoints, optimistic concurrency, persistent history |
 | [Durable Job Queue](durable-job-queue/) | Python, SQLite | Worker leases, retries, idempotency, dead letters |
 | [Signed Webhook Receiver](signed-webhook-receiver/) | TypeScript, Node.js 24, HMAC | Signature verification, replay protection, bounded request handling |
-
 | [MCP Knowledge Tools](mcp-knowledge-tools/) | Python, MCP SDK 2.2 | Read-only tools, structured results, resources, stdio |
 | [Ollama Request Gateway](ollama-request-gateway/) | TypeScript, Node.js 24 | Local inference adapter, deadlines, concurrency, circuit breaker |
 
@@ -25,10 +24,16 @@ Install Python 3.11 or newer. Five Python projects use only the standard library
 ```sh
 git clone https://github.com/ssaka2/Ai-project-.git
 cd Ai-project-
+python -m venv .venv
+# Linux/macOS:
+. .venv/bin/activate
+# Windows PowerShell: .venv\Scripts\Activate.ps1
 python -m pip install -r portfolio/mcp-knowledge-tools/requirements.txt
 python portfolio/run_tests.py
 python portfolio/airport-analytics/pipeline.py portfolio/airport-analytics/sample_flights.csv --db :memory:
 ```
+
+These commands verify local projects; GitHub repository links do not launch a hosted application. To run CareerDesk in a browser, follow the [Docker setup](../README.md#start-the-full-stack) and open `http://localhost:8080` on the same computer.
 
 Run the C# API integration checks separately with `python portfolio/support-ticket-api/verify_api.py`.
 
