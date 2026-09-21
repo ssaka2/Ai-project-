@@ -1,17 +1,25 @@
 # Railway deployment
 
-This configuration prepares the existing ASP.NET Core application for Railway.
-It does not create a Railway project, database, SMTP account, volume, or live URL.
+A private CareerDesk project and an empty careerdesk-web service have been prepared in Railway. The application is not deployed: no source, database, SMTP provider, persistent volume, or public app URL is configured yet.
 
 ## Service configuration
 
-Deploy ssaka2/Ai-project- from main with the repository root as the service root.
-The committed railway.json selects the Dockerfile, runs /app/migrate before
-startup, and checks /health/ready. Keep the Dockerfile's normal entrypoint.
+Once the prerequisites below are available, connect ssaka2/Ai-project- from main with the repository root as the service root. Do not connect it early and trigger an incomplete deployment.
 
-Railway's [configuration reference](https://docs.railway.com/config-as-code/reference)
-and [pre-deploy command guide](https://docs.railway.com/deployments/pre-deploy-command)
-describe these settings. A migration failure must block the release.
+The prepared service uses direct Railway settings:
+
+| Setting | Value |
+| --- | --- |
+| Builder | Dockerfile |
+| Dockerfile path | Dockerfile |
+| Pre-deploy command | /app/migrate |
+| Health-check path | /health/ready |
+| Health-check timeout | 300 seconds |
+| Restart retries | 3 |
+
+Keep the Dockerfile's normal entrypoint. A migration failure must block the release.
+
+The obsolete railway.json has been removed. Railway's [current configuration documentation](https://docs.railway.com/infrastructure-as-code#iac-vs-config-as-code) says new services cannot opt into Config as Code. This project currently uses direct service settings, not a generated Infrastructure as Code deployment. If IaC is adopted later, import the existing environment, review the plan, and preserve its resource identities.
 
 Set these values in Railway's service variables, never in the repository:
 
@@ -36,7 +44,7 @@ The database must be SQL Server; a PostgreSQL URL is not compatible with this
 application. Use a production-licensed SQL Server service, certificate validation,
 and an appropriately scoped login. The bundled pre-deploy task needs schema
 permissions. For least privilege, run that task separately with a migration
-identity and remove preDeployCommand from this file; give the running app only
+identity and remove the pre-deploy command from the service settings; give the running app only
 its runtime database permissions.
 
 Provision persistent storage at /var/keys that is writable by the Docker image's
