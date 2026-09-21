@@ -9,7 +9,7 @@ success does not establish that the Azure resources exist or that the app is liv
 Run in Azure Cloud Shell **Bash** with the intended subscription selected:
 
 ```bash
-git clone --branch codex/azure-free-preflight https://github.com/ssaka2/Ai-project-.git careerdesk-azure-check
+git clone --branch main https://github.com/ssaka2/Ai-project-.git careerdesk-azure-check
 cd careerdesk-azure-check
 python3 scripts/azure_preflight.py
 ```

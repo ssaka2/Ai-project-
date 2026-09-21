@@ -9,7 +9,7 @@ ARM machines require emulation.
 ```sh
 git clone https://github.com/ssaka2/Ai-project-.git
 cd Ai-project-
-git checkout codex/ai-resume-tailoring
+git checkout main
 python3 scripts/setup.py
 docker compose up --build -d --wait web
 ```
