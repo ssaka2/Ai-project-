@@ -23,6 +23,16 @@ Updated September 21, 2026. Public source code, passing CI, and a deployed servi
 | Inventory Ledger | Local Python/SQLite CLI | Persistent database; hosted access needs authentication and a web/API interface |
 | Airport Analytics | Local CSV/SQLite pipeline | Input files and execution environment; not a continuously running website |
 
-No projects are provisioned in the connected Railway account as of this review. No production SQL Server or SMTP credentials were supplied. No paid model or compute resources were provisioned. Do not expose development Mailpit, unauthenticated sample APIs, or developer database settings as a substitute for these prerequisites.
+A private CareerDesk project and an empty careerdesk-web service are now prepared in the connected Railway account. Dockerfile, migration pre-deploy command, readiness checks, and restart settings are configured directly on the service. Production environment, port 8080, confirmed-account enforcement, disabled AI, and the planned /var/keys path are set without deploying. No source is connected, no deployment exists, and no persistent volume is attached yet. No production SQL Server or SMTP credentials were supplied. No model or compute workload was started.
+
+Railway's configuration API rejected the legacy railwayConfigFile setting as deprecated. The equivalent service settings were successfully applied directly. The repository's railway.json is retained for now; its legacy deployment instructions need migration before connecting the source. Free-tier allowance and billing limits have not been verified. Do not expose development Mailpit, unauthenticated sample APIs, or developer database settings as a substitute for these prerequisites.
 
 See [CareerDesk deployment configuration](railway-deployment.md) for the prepared service settings and acceptance checks. Use hosting-provider secret settings for credentials; never put them in a README or chat message.
+
+## Prepared Railway target
+
+- Project: CareerDesk (`1a65ce11-5170-4be2-a9dd-5df15a5fa146`)
+- Environment: production (`c4193e7b-84aa-4c31-b15f-25bd9d9488ae`)
+- Service: careerdesk-web (`e15a43ed-e361-40ae-ae44-6a92c6b6f674`)
+
+Before starting: verify the account's free allowance, provide a production SQL Server connection and verified SMTP configuration through service secrets, attach persistent storage for application keys, and configure the public hostname and HTTPS proxy handling. This target is prepared, not deployed.
