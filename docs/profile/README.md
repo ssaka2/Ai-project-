@@ -23,6 +23,7 @@ I build backend applications with C#, ASP.NET Core, and SQL, and explore Python 
 | Backend reliability | [Support Ticket API](https://github.com/ssaka2/Ai-project-/tree/main/portfolio/support-ticket-api) · [Durable Job Queue](https://github.com/ssaka2/Ai-project-/tree/main/portfolio/durable-job-queue) · [Signed Webhook Receiver](https://github.com/ssaka2/Ai-project-/tree/main/portfolio/signed-webhook-receiver) |
 | Data systems | [Inventory Ledger](https://github.com/ssaka2/Ai-project-/tree/main/portfolio/inventory-ledger) · [Airport Analytics](https://github.com/ssaka2/Ai-project-/tree/main/portfolio/airport-analytics) |
 | AI evaluation & retrieval | [Agent Evaluation Lab](https://github.com/ssaka2/Ai-project-/tree/main/portfolio/agent-evaluation-lab) · [Local Knowledge Search](https://github.com/ssaka2/Ai-project-/tree/main/portfolio/local-knowledge-search) |
+| Agent context & contracts | [Agent Memory Store](https://github.com/ssaka2/Ai-project-/tree/main/portfolio/agent-memory-store) · [AI Response Contract Lab](https://github.com/ssaka2/Ai-project-/tree/main/portfolio/ai-response-contract-lab) |
 
 ## Technology in the code
 

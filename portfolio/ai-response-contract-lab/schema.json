@@ -1,0 +1,1 @@
+{"type":"object","properties":{"category":{"enum":["billing","technical","other"]},"summary":{"type":"string","minLength":1,"maxLength":200},"priority":{"type":"integer","minimum":1,"maximum":3}},"required":["category","summary","priority"],"additionalProperties":false}

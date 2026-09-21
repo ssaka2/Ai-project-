@@ -18,12 +18,16 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install MCP SDK
+      - name: Install Python project dependencies
         run: |
-          python -m pip install -r portfolio/mcp-knowledge-tools/requirements.txt
+          python -m pip install -r portfolio/mcp-knowledge-tools/requirements.txt -r portfolio/ai-response-contract-lab/requirements.txt
           python -m pip check
       - name: Run MCP client demo
         run: python portfolio/mcp-knowledge-tools/demo.py
+      - name: Run structured-output and agent-memory demos
+        run: |
+          python portfolio/ai-response-contract-lab/contracts.py --schema portfolio/ai-response-contract-lab/schema.json --response portfolio/ai-response-contract-lab/response.json
+          python portfolio/agent-memory-store/memory_store.py demo
       - name: Test every portfolio project
         run: python portfolio/run_tests.py
       - name: Run sample analytics pipeline

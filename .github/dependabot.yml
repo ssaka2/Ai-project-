@@ -22,3 +22,7 @@ updates:
     directory: /portfolio/mcp-knowledge-tools
     schedule:
       interval: weekly
+  - package-ecosystem: pip
+    directory: /portfolio/ai-response-contract-lab
+    schedule:
+      interval: weekly

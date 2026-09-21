@@ -7,10 +7,10 @@ Suggested account fields:
 - Name: Sai Sandeep Saka
 - Bio: Software developer | C#, ASP.NET Core & SQL | Building backend applications, data workflows, and practical AI tooling.
 - Website: https://github.com/ssaka2/Ai-project-/tree/main/portfolio
-- Ai-project- repository description: Software engineering portfolio: 10 projects spanning .NET, SQL, Python, TypeScript, MCP, AI evaluation, and reliable backend systems.
+- Ai-project- repository description: Software engineering portfolio: 12 projects spanning .NET, SQL, Python, TypeScript, MCP, AI evaluation, and reliable backend systems.
 - Repository topics: csharp, dotnet, aspnet-core, sql-server, python, typescript, nodejs, sqlite, model-context-protocol, ai-evaluation, docker, portfolio
 
-Keep Ai-project- pinned. The ten projects currently share this repository; individual folders cannot be pinned as separate repositories. Do not label them as ten GitHub repositories.
+Keep Ai-project- pinned. The twelve projects currently share this repository; individual folders cannot be pinned as separate repositories. Do not label them as twelve GitHub repositories.
 
 ## Current themes
 
