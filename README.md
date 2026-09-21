@@ -1,7 +1,21 @@
-# AI Career Desk
+# Sai Sandeep Saka · Software Engineering Portfolio
 
-A full-stack C# / ASP.NET Core application for organizing IT job applications
-and preparing job-specific resume drafts.
+**Backend applications, reliable data workflows, and practical AI tooling.**
+
+[![CareerDesk build](https://github.com/ssaka2/Ai-project-/actions/workflows/ci.yml/badge.svg)](https://github.com/ssaka2/Ai-project-/actions/workflows/ci.yml)
+[![Portfolio tests](https://github.com/ssaka2/Ai-project-/actions/workflows/portfolio.yml/badge.svg)](https://github.com/ssaka2/Ai-project-/actions/workflows/portfolio.yml)
+
+[Explore all 10 projects](portfolio/README.md) · [Run CareerDesk](#start-the-full-stack) · [Verification details](docs/technology-review.md)
+
+| Start with | What it demonstrates |
+| --- | --- |
+| **AI CareerDesk** | C# / ASP.NET Core, EF Core, SQL Server, private job tracking, and resume workflows |
+| **[MCP Knowledge Tools](portfolio/mcp-knowledge-tools/)** | Python agent tools, source citations, document snapshots, and actual MCP protocol tests |
+| **[Ollama Request Gateway](portfolio/ollama-request-gateway/)** | TypeScript / Node.js, request cancellation, timeouts, concurrency limits, and circuit recovery |
+
+**Technology in this repository:** C# · .NET 10 · SQL Server · Python · SQLite · TypeScript · Node.js 24 · MCP · Docker · GitHub Actions · Playwright
+
+The root application is **AI CareerDesk**, a full-stack application for organizing IT job applications and preparing job-specific resume drafts. Nine independent projects live in `portfolio/`.
 
 ## Portfolio projects
 
