@@ -29,6 +29,8 @@ SQLite's database-level writer serialization is a deliberate simplicity tradeoff
 
 ## Verification
 
-Nine automated tests cover retries, rollback, conflicting IDs, reorder boundaries, invalid inputs, two concurrent sales competing for the last item, integer overflow, oversized quantities, and database-open failures. Stock is limited to signed 64-bit integers; overflow attempts roll back without changing the audit trail. Tests use disposable databases.
+Eleven automated tests cover retries, rollback, conflicting IDs, reorder boundaries, invalid inputs, two concurrent sales competing for the last item, integer overflow, oversized quantities, and database-open failures. Stock is limited to signed 64-bit integers; overflow attempts roll back without changing the audit trail. Tests use disposable databases.
 
 Possible extensions: an ASP.NET Core API, SQL Server persistence, stock reservations, and authenticated warehouse roles. These extensions are not implemented.
+
+SKU whitespace is normalized consistently for creation, movement, and history. Reorder points must be nonnegative signed 64-bit integers.

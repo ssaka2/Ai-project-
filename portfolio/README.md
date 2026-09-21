@@ -13,6 +13,7 @@ Runnable projects demonstrating backend logic, relational data modeling, documen
 | [Agent Evaluation Lab](agent-evaluation-lab/) | Python, JSONL, HTML | Response/trace checks, budget limits, regression gates |
 | [Support Ticket API](support-ticket-api/) | C#, .NET 10, ASP.NET Core | REST endpoints, optimistic concurrency, persistent history |
 | [Durable Job Queue](durable-job-queue/) | Python, SQLite | Worker leases, retries, idempotency, dead letters |
+| [Signed Webhook Receiver](signed-webhook-receiver/) | TypeScript, Node.js 24, HMAC | Signature verification, replay protection, bounded request handling |
 
 ## Quick start
 
@@ -26,6 +27,8 @@ python portfolio/airport-analytics/pipeline.py portfolio/airport-analytics/sampl
 ```
 
 Run the C# API integration checks separately with `python portfolio/support-ticket-api/verify_api.py`.
+
+The webhook project requires Node.js 24. Run `node --test portfolio/signed-webhook-receiver/test_server.ts`.
 
 Each project has its own entry point, test suite, setup instructions, design decisions, and limitations. They can be extracted into separate repositories without depending on CareerDesk.
 
@@ -41,6 +44,6 @@ Each project has its own entry point, test suite, setup instructions, design dec
 
 The two AI-focused projects demonstrate retrieval and agent evaluation, motivated by [contextual retrieval engineering](https://www.anthropic.com/engineering/contextual-retrieval) and [agent evaluation practices published in January 2026](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents). These are topic choices, not a claim that these repositories appear on GitHub Trending.
 
-The portfolio workflow tests all five Python projects on Python 3.11, 3.12, and 3.13 and publishes downloadable example evaluation reports as workflow artifacts. A separate job builds the Support Ticket API and runs 13 HTTP integration checks. AI CareerDesk has its own .NET/SQL Server/browser/Docker workflow.
+The portfolio workflow tests all five Python projects on Python 3.11, 3.12, 3.13, and 3.14 and publishes downloadable example evaluation reports as workflow artifacts. A separate job builds the Support Ticket API and runs 13 HTTP integration checks. AI CareerDesk has its own .NET/SQL Server/browser/Docker workflow.
 
 These are portfolio demonstrations. No production use, performance benchmarks, or business impact is claimed. No license has been selected; the parent repository's licensing status applies.

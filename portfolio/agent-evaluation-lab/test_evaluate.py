@@ -4,7 +4,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
-from evaluate import compare, evaluate, render_html
+from evaluate import compare, evaluate, render_html, read_jsonl
 
 
 class EvaluationTests(unittest.TestCase):
@@ -76,6 +76,13 @@ class EvaluationTests(unittest.TestCase):
             self.assertEqual(failure.returncode, 1)
             invalid = subprocess.run(base + [str(project / 'examples/candidate.jsonl'), '--min-pass-rate', 'nan'], capture_output=True, text=True)
             self.assertEqual(invalid.returncode, 2)
+
+    def test_duplicate_json_fields_rejected(self):
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / 'runs.jsonl'
+            path.write_text('{"id":"one","answer":"wrong","answer":"correct"}\n')
+            with self.assertRaises(ValueError):
+                read_jsonl(path)
 
 
 if __name__ == '__main__':

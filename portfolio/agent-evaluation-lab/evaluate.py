@@ -26,6 +26,15 @@ def strings(value, name):
     return value
 
 
+def unique_fields(pairs):
+    record = {}
+    for key, value in pairs:
+        if key in record:
+            raise ValueError(f'Duplicate JSON field: {key}')
+        record[key] = value
+    return record
+
+
 def read_jsonl(path):
     records = []
     with Path(path).open(encoding='utf-8') as handle:
@@ -33,7 +42,7 @@ def read_jsonl(path):
             if not line.strip():
                 continue
             try:
-                record = json.loads(line)
+                record = json.loads(line, object_pairs_hook=unique_fields)
             except ValueError as exc:
                 raise ValueError(f'{path}:{line_number}: invalid JSON') from exc
             if not isinstance(record, dict):

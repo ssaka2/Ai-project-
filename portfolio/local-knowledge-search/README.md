@@ -45,3 +45,5 @@ This is lexical retrieval: synonyms and paraphrases without shared terms can be 
 Retrieval quality is a practical part of building useful AI applications. This small baseline makes ranking and citation behavior inspectable before adding a model or vector database. See [Anthropic's contextual retrieval discussion](https://www.anthropic.com/engineering/contextual-retrieval) for the broader engineering context; this project does not implement that article's contextual embedding technique.
 
 All bundled documents are synthetic. No license has been selected; the parent repository's licensing status applies.
+
+Search and evaluation require an existing index file. A missing path returns exit 2 rather than creating an empty database.

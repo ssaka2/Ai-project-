@@ -42,10 +42,12 @@ SQLite `BEGIN IMMEDIATE` serializes claims. Each claim increments the attempt co
 
 Persistence survives process restart. Worker recovery permits **at-least-once execution attempts**, not exactly-once side effects or guaranteed success: a handler can finish its work and crash before recording completion. Real handlers must make external effects idempotent. The example handlers are pure computations.
 
-Nine tests cover persistence, competing workers, duplicate keys, stale and expired tokens, retry timing, dead-letter transitions, double completion, and input validation. Test clocks are supplied directly to queue functions, so retry tests do not sleep.
+Eleven tests cover persistence, competing workers, duplicate keys, stale and expired tokens, retry timing, dead-letter transitions, double completion, and input validation. Test clocks are supplied directly to queue functions, so retry tests do not sleep.
 
-This is a local prototype: no lease heartbeat, remote broker, dashboard, authentication, retention policy, metrics backend, or dead-letter replay command is included. Handlers must finish within the lease. SQLite allows one writer at a time and is not a distributed queue. Wall-clock changes can affect lease timing. Job payloads and results are stored in plaintext; the examples use synthetic text.
+This is a local prototype: no automatic heartbeat scheduler, remote broker, dashboard, authentication, retention policy, metrics backend, or dead-letter replay command is included. Handlers must finish within the lease. SQLite allows one writer at a time and is not a distributed queue. Wall-clock changes can affect lease timing. Job payloads and results are stored in plaintext; the examples use synthetic text.
 
 CLI usage/input failures exit 2. A processed job that failed its handler still produces a valid queue result and exits 0; inspect the returned state or the job listing to see retries/dead letters.
 
 No license has been selected; the parent repository's licensing status applies.
+
+Long-running custom handlers may call `renew(db, id, token, lease_seconds=30)` before expiry. Renewal checks ownership, cannot revive expired jobs, and never shortens the current lease. The built-in short handlers do not schedule heartbeats.

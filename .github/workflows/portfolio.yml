@@ -12,10 +12,10 @@ jobs:
     timeout-minutes: 5
     strategy:
       matrix:
-        python-version: ['3.11', '3.12', '3.13']
+        python-version: ['3.11', '3.12', '3.13', '3.14']
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
       - name: Test every portfolio project
@@ -32,7 +32,7 @@ jobs:
       - name: Generate agent evaluation reports
         working-directory: portfolio/agent-evaluation-lab
         run: python evaluate.py examples/suite.jsonl examples/candidate.jsonl --baseline examples/baseline.jsonl --output output
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: agent-evaluation-python-${{ matrix.python-version }}
           path: portfolio/agent-evaluation-lab/output/
@@ -40,12 +40,26 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.13'
       - name: Build API and verify HTTP behavior and restart persistence
         run: python portfolio/support-ticket-api/verify_api.py
+  signed-webhook-receiver:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Verify signed requests and duplicate handling
+        working-directory: portfolio/signed-webhook-receiver
+        run: |
+          npm test
+          npm run demo

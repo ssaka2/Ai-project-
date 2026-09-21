@@ -24,7 +24,8 @@ def connect(path):
 
 
 def add_product(db, sku, name, reorder_point=5):
-    if not sku.strip() or not name.strip() or reorder_point < 0:
+    if (not isinstance(sku, str) or not isinstance(name, str) or
+        not sku.strip() or not name.strip() or type(reorder_point) is not int or not 0 <= reorder_point < 2**63):
         raise ValueError('SKU, name and a nonnegative reorder point are required')
     with db:
         db.execute('INSERT INTO products(sku,name,reorder_point) VALUES (?,?,?)',
@@ -32,6 +33,9 @@ def add_product(db, sku, name, reorder_point=5):
 
 
 def move(db, sku, delta, request_id):
+    if not isinstance(sku, str) or not sku.strip() or not isinstance(request_id, str):
+        raise ValueError('SKU and request ID must be nonempty text')
+    sku = sku.strip()
     if type(delta) is not int or not -(2**63) < delta < 2**63 or delta == 0 or not request_id.strip():
         raise ValueError('A nonzero signed 64-bit quantity and request ID are required')
     # A reserved write lock serializes check-and-update across CLI processes.
@@ -86,7 +90,7 @@ def main():
             result = {'applied': move(db, args.sku, args.delta, args.request_id)}
         elif args.command == 'history':
             result = [dict(row) for row in db.execute(
-                'SELECT * FROM movements WHERE sku=? ORDER BY rowid', (args.sku,))]
+                'SELECT * FROM movements WHERE sku=? ORDER BY rowid', (args.sku.strip(),))]
         else:
             result = report(db, args.low_stock)
         print(json.dumps(result, indent=2))

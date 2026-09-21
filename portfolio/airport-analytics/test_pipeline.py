@@ -1,4 +1,5 @@
 import sqlite3
+import csv
 import tempfile
 import unittest
 import subprocess
@@ -69,6 +70,19 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(result.returncode, 2)
         self.assertIn('Error:', result.stderr)
         self.assertNotIn('Traceback', result.stderr)
+
+    def test_malformed_csv_preserves_existing_data(self):
+        self.write('A,2026-09-01,ORD,JFK,1,0\n')
+        load(self.db, self.csv)
+        self.write('B,2026-09-01,ORD,JFK,1,0\n"unterminated')
+        with self.assertRaises(csv.Error):
+            load(self.db, self.csv)
+        self.assertEqual(report(self.db)[0]['total_flights'], 1)
+
+    def test_rejected_line_after_multiline_record_is_physical_line(self):
+        self.write('"A\n1",2026-09-01,ORD,JFK,1,0\nB,invalid,ORD,JFK,1,0\n')
+        quality = load(self.db, self.csv)
+        self.assertEqual(quality['rejected'][0]['line'], 4)
 
 
 if __name__ == '__main__':

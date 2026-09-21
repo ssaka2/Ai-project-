@@ -56,3 +56,5 @@ The implementation evaluates one recorded trial per case; it does not estimate r
 Tests cover missing results, exact matches, tool/budget violations, malformed inputs, case-level regressions, escaped HTML, and CLI/report behavior. See [Anthropic's January 2026 agent evaluation guide](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents) for the broader practice motivating this project.
 
 No license has been selected; the parent repository's licensing status applies.
+
+Duplicate field names inside a JSON object are rejected before grading; they cannot silently replace an earlier answer or check.

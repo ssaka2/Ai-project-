@@ -38,10 +38,15 @@ def load(db, source):
         PRIMARY KEY(flight_id, flight_date))''')
     accepted, rejected, seen = [], [], set()
     with open(source, newline='', encoding='utf-8-sig') as handle:
-        reader = csv.DictReader(handle)
+        reader = csv.DictReader(handle, strict=True)
         if reader.fieldnames != FIELDS:
             raise ValueError('Expected CSV columns: ' + ','.join(FIELDS))
-        for line, row in enumerate(reader, start=2):
+        while True:
+            try:
+                row = next(reader)
+            except StopIteration:
+                break
+            line = reader.line_num
             try:
                 values = validate(row)
                 if values[:2] in seen:
@@ -75,7 +80,7 @@ def main():
         db = sqlite3.connect(args.db)
         quality = load(db, args.source)
         print(json.dumps({'quality': quality, 'airports': report(db)}, indent=2))
-    except (OSError, ValueError, sqlite3.Error) as exc:
+    except (OSError, ValueError, csv.Error, sqlite3.Error) as exc:
         parser.exit(2, f'Error: {exc}\n')
     finally:
         if db is not None:

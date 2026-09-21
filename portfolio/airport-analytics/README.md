@@ -40,6 +40,8 @@ An airport with only cancelled flights has null mean delay and null on-time perc
 
 ## Verification and limitations
 
-Six tests cover metric denominators, reruns/corrections, invalid rows/duplicates, the 15-minute boundary, preservation of data after a bad header, and clean CLI errors for invalid database paths.
+Eight tests cover metric denominators, reruns/corrections, invalid rows/duplicates, the 15-minute boundary, preservation of data after a bad header, and clean CLI errors for invalid database paths.
 
 This is a small-data demonstration: validated records are buffered in memory before a transaction. It does not use Spark, stream live data, or predict delays. Extensions could include chunked ingestion, provenance tables, date filters, and a dashboard.
+
+Malformed CSV quoting fails the complete load with exit 2 and preserves prior data. Rejection line numbers refer to physical source lines, including files with multiline quoted fields.

@@ -133,6 +133,8 @@ def main():
     args = parser.parse_args()
     db = None
     try:
+        if args.command != 'index' and not Path(args.db).is_file():
+            raise ValueError('Index database does not exist. Run the index command first.')
         db = open_index(args.db)
         if args.command == 'index':
             result = index_documents(db, args.folder, args.chunk_lines, args.overlap)

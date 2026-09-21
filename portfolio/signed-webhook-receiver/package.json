@@ -1,0 +1,12 @@
+{
+  "name": "signed-webhook-receiver",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=24 <25" },
+  "scripts": {
+    "start": "node server.ts",
+    "test": "node --test test_server.ts",
+    "demo": "node demo.ts"
+  }
+}

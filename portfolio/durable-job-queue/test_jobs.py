@@ -2,7 +2,7 @@ import tempfile
 import unittest
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from jobs import claim, connect, enqueue, finish, work_once
+from jobs import claim, connect, enqueue, finish, work_once, renew
 
 
 class QueueTests(unittest.TestCase):
@@ -89,6 +89,22 @@ class QueueTests(unittest.TestCase):
                 ('x', 'sha256', {'text': ''}, 0)]:
             with self.assertRaises(ValueError):
                 enqueue(self.db, key, kind, payload, attempts)
+
+    def test_renewal_keeps_job_owned_without_shortening_lease(self):
+        identifier = self.add()
+        job = claim(self.db, lease_seconds=5, now=0)
+        renew(self.db, identifier, job['token'], lease_seconds=20, now=4)
+        renew(self.db, identifier, job['token'], lease_seconds=1, now=5)
+        self.assertIsNone(claim(self.db, now=6))
+        self.assertEqual(finish(self.db, identifier, job['token'], result={}, now=23), 'succeeded')
+
+    def test_expired_or_wrong_token_cannot_renew(self):
+        identifier = self.add()
+        job = claim(self.db, lease_seconds=5, now=0)
+        with self.assertRaises(ValueError):
+            renew(self.db, identifier, 'wrong', now=1)
+        with self.assertRaises(ValueError):
+            renew(self.db, identifier, job['token'], now=5)
 
 
 if __name__ == '__main__':

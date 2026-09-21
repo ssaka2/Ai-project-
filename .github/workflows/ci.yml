@@ -11,8 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: "10.0.x"
       - run: dotnet restore AiCareerDesk.slnx
@@ -84,7 +84,7 @@ jobs:
       - name: Container diagnostics on failure
         if: failure()
         run: docker compose -p career-smoke logs --tail 80 web migrate || true
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: test-results
@@ -94,3 +94,4 @@ jobs:
         run: |
           docker rm -f career-sql career-mailpit || true
           if test -f .env; then docker compose -p career-smoke down -v; fi
+

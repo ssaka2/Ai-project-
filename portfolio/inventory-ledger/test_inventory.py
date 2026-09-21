@@ -72,6 +72,16 @@ class InventoryTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             move(self.db, 'USB', 2**63, 'too-large')
 
+    def test_sku_whitespace_is_consistent(self):
+        move(self.db, ' USB ', 1, 'receipt')
+        self.assertFalse(move(self.db, 'USB', 1, 'receipt'))
+        self.assertEqual(report(self.db)[0]['stock'], 1)
+
+    def test_reorder_point_must_be_integer(self):
+        for value in [1.5, True, 2**63]:
+            with self.assertRaises(ValueError):
+                add_product(self.db, 'NEW', 'New product', value)
+
     def test_invalid_database_path_has_clean_cli_error(self):
         result = subprocess.run([sys.executable, str(Path(__file__).with_name('inventory.py')),
             '--db', str(Path(self.directory.name) / 'missing' / 'test.db'), 'list'],

@@ -1,6 +1,8 @@
 import json
 import tempfile
 import unittest
+import subprocess
+import sys
 from pathlib import Path
 from search import chunk_text, evaluate, index_documents, open_index, search
 
@@ -92,6 +94,13 @@ class SearchTests(unittest.TestCase):
         link.symlink_to(doc)
         with self.assertRaises(ValueError):
             index_documents(self.db, self.root)
+
+    def test_missing_index_cli_does_not_create_database(self):
+        missing = self.root / 'missing.db'
+        run = subprocess.run([sys.executable, str(Path(__file__).with_name('search.py')),
+            '--db', str(missing), 'search', 'example'], capture_output=True, text=True)
+        self.assertEqual(run.returncode, 2)
+        self.assertFalse(missing.exists())
 
 
 if __name__ == '__main__':

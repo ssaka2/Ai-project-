@@ -81,6 +81,19 @@ def finish(db, identifier, token, result=None, error=None, now=None):
     return state
 
 
+def renew(db, identifier, token, lease_seconds=30, now=None):
+    """Extend an unexpired owned lease; expired/stale workers cannot revive it."""
+    if type(lease_seconds) is not int or not 1 <= lease_seconds <= 3600:
+        raise ValueError('Lease must be 1–3600 seconds')
+    now = time.time() if now is None else now
+    with db:
+        changed = db.execute('''UPDATE jobs SET lease_until=MAX(lease_until, ?)
+            WHERE id=? AND token=? AND state='running' AND lease_until > ?''',
+            (now + lease_seconds, identifier, token, now)).rowcount
+        if not changed:
+            raise ValueError('Lease expired or this worker no longer owns the job')
+
+
 def execute(job):
     text = json.loads(job['payload'])['text']
     if job['kind'] == 'sha256':
