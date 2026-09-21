@@ -23,10 +23,13 @@ public sealed class BrowserTheoryAttribute : TheoryAttribute
 public class BrowserWorkflowTests
 {
     [BrowserTheory]
-    [InlineData("chromium")]
-    [InlineData("firefox")]
-    [InlineData("webkit")]
-    public async Task BrowsersCompletePrivateJobAndResumeWorkflowAtDesktopAndMobileWidths(string browserName)
+    [InlineData("chromium", 0)]
+    [InlineData("firefox", 0)]
+    [InlineData("webkit", 0)]
+    [InlineData("firefox", 1)]
+    [InlineData("firefox", 2)]
+    [InlineData("firefox", 3)]
+    public async Task BrowsersCompletePrivateJobAndResumeWorkflowAtDesktopAndMobileWidths(string browserName, int iteration)
     {
         var connection = new SqlConnectionStringBuilder(Environment.GetEnvironmentVariable("TEST_SQL_CONNECTION"))
         {
@@ -73,6 +76,9 @@ public class BrowserWorkflowTests
             var page = await aliceContext.NewPageAsync();
             var pageErrors = new List<string>();
             page.PageError += (_, error) => pageErrors.Add(error);
+            await aliceContext.Tracing.StartAsync(new() { Screenshots = true, Snapshots = true });
+            try
+            {
             var email = "browser-" + Guid.NewGuid().ToString("N") + "@example.test";
             await Register(page, email);
             await page.GotoAsync("/Jobs/Create");
@@ -156,19 +162,20 @@ public class BrowserWorkflowTests
             await Register(bob, "bob-browser-" + Guid.NewGuid().ToString("N") + "@example.test");
             Assert.Equal(404, (await bob.GotoAsync(jobUrl))!.Status);
             Assert.Equal(404, (await bob.GotoAsync(draftUrl))!.Status);
+            await page.BringToFrontAsync();
             await page.GetByRole(AriaRole.Button, new() { Name = "Sign out", Exact = true }).ClickAsync();
             await Expect(page.GetByRole(AriaRole.Link, new() { Name = "Sign in", Exact = true })).ToBeVisibleAsync();
             await page.GotoAsync("/Identity/Account/ForgotPassword");
             await page.GetByLabel("Email", new() { Exact = true }).FillAsync(email);
             await page.Locator("main form button[type=submit]").ClickAsync();
-            await page.WaitForURLAsync("**/Identity/Account/ForgotPasswordConfirmation", new() { WaitUntil = WaitUntilState.Commit });
+            await Expect(page).ToHaveURLAsync(new Regex(@"/Identity/Account/ForgotPasswordConfirmation$"), new() { Timeout = 30000 });
             await Expect(page.GetByRole(AriaRole.Heading, new() { Name = "Forgot password confirmation", Exact = true })).ToBeVisibleAsync();
             await page.GotoAsync(await EmailLink(email, "Reset"));
             await page.GetByLabel("Email", new() { Exact = true }).FillAsync(email);
             await page.GetByLabel("Password", new() { Exact = true }).FillAsync("Browser-Replacement42!");
             await page.GetByLabel(new Regex("^Confirm password$", RegexOptions.IgnoreCase)).FillAsync("Browser-Replacement42!");
             await page.Locator("main form button[type=submit]").ClickAsync();
-            await page.WaitForURLAsync("**/Identity/Account/ResetPasswordConfirmation", new() { WaitUntil = WaitUntilState.Commit });
+            await Expect(page).ToHaveURLAsync(new Regex(@"/Identity/Account/ResetPasswordConfirmation$"), new() { Timeout = 30000 });
             await Expect(page.GetByRole(AriaRole.Heading, new() { Name = "Reset password confirmation", Exact = true })).ToBeVisibleAsync();
             await page.GotoAsync("/Identity/Account/Login");
             await page.GetByLabel("Email", new() { Exact = true }).FillAsync(email);
@@ -178,6 +185,17 @@ public class BrowserWorkflowTests
             await page.GotoAsync(draftUrl);
             await Expect(page.GetByLabel("Draft text")).ToHaveValueAsync("Saved browser draft");
             Assert.Empty(pageErrors);
+            }
+            catch
+            {
+                var artifacts = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../../TestResults"));
+                Directory.CreateDirectory(artifacts);
+                Console.WriteLine($"Browser failure on {browserName}: {page.Url}");
+                await File.WriteAllTextAsync(Path.Combine(artifacts, $"{browserName}-{iteration}-failure.html"), await page.ContentAsync());
+                await page.ScreenshotAsync(new() { Path = Path.Combine(artifacts, $"{browserName}-failure.png"), FullPage = true });
+                await aliceContext.Tracing.StopAsync(new() { Path = Path.Combine(artifacts, $"{browserName}-{iteration}-trace.zip") });
+                throw;
+            }
         }
         finally
         {
