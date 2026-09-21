@@ -25,6 +25,7 @@ public class PageTests
     [InlineData("/")]
     [InlineData("/Identity/Account/Register")]
     [InlineData("/Identity/Account/Login")]
+    [InlineData("/Identity/Account/ForgotPassword")]
     public async Task PublicPagesRender(string path)
     {
         await using var factory = Factory();
@@ -62,15 +63,17 @@ public class PageTests
         Assert.Contains("/Identity/Account/Login", response.Headers.Location!.ToString());
     }
 
-    [Fact]
-    public async Task RegisterPostWithoutAntiforgeryTokenIsRejected()
+    [Theory]
+    [InlineData("/Identity/Account/Register")]
+    [InlineData("/Identity/Account/ForgotPassword")]
+    public async Task AccountPostWithoutAntiforgeryTokenIsRejected(string path)
     {
         await using var factory = Factory();
         using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
         {
             BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false
         });
-        var response = await client.PostAsync("/Identity/Account/Register",
+        var response = await client.PostAsync(path,
             new FormUrlEncodedContent(new Dictionary<string, string>()));
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }

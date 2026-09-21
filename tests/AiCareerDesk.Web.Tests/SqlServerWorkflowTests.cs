@@ -268,6 +268,17 @@ public class SqlServerWorkflowTests
         Assert.Equal(HttpStatusCode.OK, blocked.StatusCode);
         Assert.Contains("Unable to sign in", await blocked.Content.ReadAsStringAsync());
         var sender = (RecordingEmailSender)factory.Services.GetRequiredService<IEmailSender>();
+        var originalConfirmation = sender.Messages[email];
+        var unconfirmedRecovery = await Post(client, "/Identity/Account/ForgotPassword", new() { ["Input.Email"] = email });
+        Assert.Equal(HttpStatusCode.Redirect, unconfirmedRecovery.StatusCode);
+        Assert.Equal(originalConfirmation, sender.Messages[email]);
+        var unknownEmail = "unknown-" + Guid.NewGuid().ToString("N") + "@example.test";
+        var unknownRecovery = await Post(client, "/Identity/Account/ForgotPassword", new() { ["Input.Email"] = unknownEmail });
+        Assert.Equal(unconfirmedRecovery.Headers.Location, unknownRecovery.Headers.Location);
+        Assert.False(sender.Messages.ContainsKey(unknownEmail));
+        var invalidRecovery = await Post(client, "/Identity/Account/ForgotPassword", new() { ["Input.Email"] = "invalid" });
+        Assert.Equal(HttpStatusCode.OK, invalidRecovery.StatusCode);
+        Assert.Contains("not a valid e-mail address", await invalidRecovery.Content.ReadAsStringAsync());
         var confirmationUrl = WebUtility.HtmlDecode(Regex.Match(sender.Messages[email], """href=['"]([^'"]+)""").Groups[1].Value);
         Assert.False(string.IsNullOrWhiteSpace(confirmationUrl));
         var confirmed = await client.GetAsync(confirmationUrl);
