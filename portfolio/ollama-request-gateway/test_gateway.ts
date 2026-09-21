@@ -1,4 +1,4 @@
-import { createServer, type Server } from 'node:http';
+import { createServer, request, type Server } from 'node:http';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createGateway } from './gateway.ts';
@@ -62,4 +62,41 @@ test('opens circuit and recovers after cooldown', async t => {
 });
 test('rejects remote upstream configuration', () => {
   assert.throws(() => createGateway({ token, model: 'test', upstream: 'https://example.com' }));
+});
+
+test('caller disconnect aborts upstream, frees capacity, and does not open circuit', async t => {
+  let entered: () => void = () => {};
+  let disconnected: () => void = () => {};
+  const started = new Promise<void>(resolve => entered = resolve);
+  const stopped = new Promise<void>(resolve => disconnected = resolve);
+  let calls = 0;
+  const upstream = createServer((_req, res) => {
+    calls++;
+    if (calls === 1) { res.on('close', disconnected); entered(); }
+    else res.end('{"response":"next request works"}');
+  });
+  const upstreamURL = await listen(upstream);
+  const gateway = createGateway({ token, model: 'fixture', upstream: upstreamURL,
+    concurrency: 1, failureThreshold: 1, timeoutMs: 5000 });
+  const url = await listen(gateway);
+  t.after(async () => { for (const server of [gateway, upstream]) {
+    server.closeAllConnections(); await new Promise<void>(r => server.close(() => r()));
+  } });
+  const first = request(url + '/generate', { method: 'POST', headers: {
+    authorization: `Bearer ${token}`, 'content-type': 'application/json' } });
+  first.on('error', () => {});
+  first.end(JSON.stringify({ prompt: 'Cancel me' }));
+  await started;
+  first.destroy();
+  let timer: ReturnType<typeof setTimeout>;
+  try {
+    await Promise.race([stopped, new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error('Upstream did not cancel promptly')), 1500);
+    })]);
+  } finally { clearTimeout(timer!); }
+  const response = await fetch(url + '/generate', { method: 'POST', headers: {
+    authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+    body: JSON.stringify({ prompt: 'Next request' }) });
+  assert.equal(response.status, 200);
+  assert.equal(calls, 2);
 });

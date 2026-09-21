@@ -38,3 +38,13 @@ The projects remain local portfolio demonstrations where documented. No external
 ## Additional agent tooling projects
 
 MCP Knowledge Tools uses official SDK 2.2.0, with eight checks including actual stdio client calls. Ollama Request Gateway uses Node.js 24 and native TypeScript, with seven mock-backed HTTP checks for forwarding, validation, authentication, size limits, concurrency, timeouts, and circuit recovery. The two projects bring the collection to ten including CareerDesk. Actual Ollama inference requires an installed local model and is not exercised by CI. Dependabot also checks the MCP requirement weekly.
+
+## Follow-up verification and upgrades
+
+Reviewed the ten-project collection and current open dependency proposals. Updated the test toolchain together: Microsoft.Playwright 1.56.0 → 1.62.0, Microsoft.NET.Test.Sdk 17.14.1 → 18.10.1, and xunit.runner.visualstudio 3.1.1 → 4.0.0. These match the three pending Dependabot proposals at review time; this is not a claim that every dependency is the newest published version.
+
+The Ollama gateway now aborts its upstream HTTP request when its caller disconnects, releases capacity, and excludes caller cancellation from circuit-breaker failures. Its eighth test verifies prompt cancellation and a successful subsequent request. The model server controls whether computation itself stops. Python CI additionally checks installed dependency compatibility with `pip check`.
+
+Verification covers 59 Python tests across six projects, 16 TypeScript HTTP tests, the C# ticket API checks, and CareerDesk's build, migrations, dependency advisory audit, service/SQL/browser tests, and Docker restart checks. CI is the authority for the upgraded .NET toolchain. Live cloud deployments, Gmail/Google OAuth credentials, paid AI APIs, and actual local Ollama inference are outside these fixture-backed checks.
+
+Version references: [Playwright package](https://www.nuget.org/packages/Microsoft.Playwright/1.62.0), [.NET test SDK](https://www.nuget.org/packages/Microsoft.NET.Test.Sdk/18.10.1), [xUnit adapter release notes](https://xunit.net/releases/visualstudio/4.0.0).

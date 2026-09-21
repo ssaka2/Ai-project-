@@ -19,7 +19,9 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install MCP SDK
-        run: python -m pip install -r portfolio/mcp-knowledge-tools/requirements.txt
+        run: |
+          python -m pip install -r portfolio/mcp-knowledge-tools/requirements.txt
+          python -m pip check
       - name: Run MCP client demo
         run: python portfolio/mcp-knowledge-tools/demo.py
       - name: Test every portfolio project

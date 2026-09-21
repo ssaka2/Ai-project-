@@ -41,6 +41,8 @@ export function createGateway(options: {
     if (active >= concurrency) return reply(429, { error: 'Gateway busy; retry later' });
     active++;
     const controller = new AbortController();
+    const onDisconnect = () => { if (!res.writableEnded) controller.abort(); };
+    res.once('close', onDisconnect);
     const timer = setTimeout(() => { controller.abort(); req.destroy(); }, timeoutMs);
     let upstreamStarted = false;
     try {
@@ -66,12 +68,13 @@ export function createGateway(options: {
         reply(200, { model, response: result.response });
       } finally { clearTimeout(generationTimer); }
     } catch (error) {
+      if (res.destroyed) return; // Caller cancellation is not an upstream failure.
       if (upstreamStarted) {
         failures++;
         if (failures >= failureThreshold) openedAt = now();
         reply(controller.signal.aborted ? 504 : 502, { error: controller.signal.aborted ? 'Upstream timed out' : 'Upstream failed' });
       } else reply(error instanceof GatewayError ? error.status : 400, { error: error instanceof GatewayError ? error.message : 'Invalid request' });
-    } finally { clearTimeout(timer); active--; }
+    } finally { clearTimeout(timer); res.off('close', onDisconnect); active--; }
   });
   server.headersTimeout = 10000;
   server.requestTimeout = 15000;
