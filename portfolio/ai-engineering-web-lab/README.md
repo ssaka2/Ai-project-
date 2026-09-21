@@ -14,6 +14,6 @@ python -m http.server 8000 --directory dist
 
 Open http://localhost:8000. Six tests cover success, failure, limits, JSON parsing, invalid inputs, and duplicate terms. Source assets and JavaScript syntax were validated. Managed static hosting offers no compatible browser preview here, so visual browser QA and WebMCP registration validation remain unverified. WebMCP is feature-detected; the ordinary UI works without it.
 
-[Deployed Site](https://sandeep-ai-engineering-lab.ssaka2.chatgpt.site) — owner-only access at publication. This does not deploy the linked backend services. Public access has not been enabled.
+[Deployed Site](https://sandeep-ai-engineering-lab.ssaka2.chatgpt.site) — public access enabled. This does not deploy the linked backend services. The browser demo is public; the linked applications remain separate local projects.
 
 Text rules use substring matching and whitespace-separated word counts, not semantic evaluation. JSON mode checks syntax only, not schemas, duplicate keys, or numeric precision. Do not use rule pass counts as evidence of factual accuracy or safety.

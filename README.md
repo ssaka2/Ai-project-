@@ -42,7 +42,7 @@ See the [technology review and verification commands](docs/technology-review.md)
 
 ## Deployed browser demo
 
-[AI Engineering Web Lab](https://sandeep-ai-engineering-lab.ssaka2.chatgpt.site) provides interactive response checks and downloadable reports. Access is currently owner-only. [Source and local setup](portfolio/ai-engineering-web-lab/). The linked backend applications are not deployed by this Site.
+[AI Engineering Web Lab](https://sandeep-ai-engineering-lab.ssaka2.chatgpt.site) provides interactive response checks and downloadable reports. Public access is enabled; anyone with the link can open the browser demo. [Source and local setup](portfolio/ai-engineering-web-lab/). The linked backend applications are not deployed by this Site.
 
 ## What you can do
 
