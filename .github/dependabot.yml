@@ -18,3 +18,7 @@ updates:
         update-types:
           - minor
           - patch
+  - package-ecosystem: pip
+    directory: /portfolio/mcp-knowledge-tools
+    schedule:
+      interval: weekly

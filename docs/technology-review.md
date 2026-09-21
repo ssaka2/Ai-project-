@@ -24,6 +24,7 @@ This update covers the repository's seven existing projects and adds one new Typ
 ## Reproduce verification
 
 ```sh
+python -m pip install -r portfolio/mcp-knowledge-tools/requirements.txt
 python portfolio/run_tests.py
 python portfolio/support-ticket-api/verify_api.py
 node --test portfolio/signed-webhook-receiver/test_server.ts
@@ -33,3 +34,7 @@ node portfolio/signed-webhook-receiver/demo.ts
 CareerDesk additionally requires the SQL Server/browser/Docker prerequisites documented in its existing setup guide. The repository's Build and test workflow provisions those dependencies. Local Python/Node tests do not replace that full integration workflow.
 
 The projects remain local portfolio demonstrations where documented. No external deployment, identity layer for the sample APIs, or production certification is implied by this update.
+
+## Additional agent tooling projects
+
+MCP Knowledge Tools uses official SDK 2.2.0, with eight checks including actual stdio client calls. Ollama Request Gateway uses Node.js 24 and native TypeScript, with seven mock-backed HTTP checks for forwarding, validation, authentication, size limits, concurrency, timeouts, and circuit recovery. The two projects bring the collection to ten including CareerDesk. Actual Ollama inference requires an installed local model and is not exercised by CI. Dependabot also checks the MCP requirement weekly.

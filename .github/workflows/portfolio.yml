@@ -18,6 +18,10 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
+      - name: Install MCP SDK
+        run: python -m pip install -r portfolio/mcp-knowledge-tools/requirements.txt
+      - name: Run MCP client demo
+        run: python portfolio/mcp-knowledge-tools/demo.py
       - name: Test every portfolio project
         run: python portfolio/run_tests.py
       - name: Run sample analytics pipeline
@@ -60,6 +64,20 @@ jobs:
           package-manager-cache: false
       - name: Verify signed requests and duplicate handling
         working-directory: portfolio/signed-webhook-receiver
+        run: |
+          npm test
+          npm run demo
+  ollama-request-gateway:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Verify gateway using a local mock Ollama endpoint
+        working-directory: portfolio/ollama-request-gateway
         run: |
           npm test
           npm run demo

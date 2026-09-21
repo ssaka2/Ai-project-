@@ -1,0 +1,8 @@
+{
+  "name": "ollama-request-gateway",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=24" },
+  "scripts": { "start": "node gateway.ts", "test": "node --test test_gateway.ts", "demo": "node demo.ts" }
+}

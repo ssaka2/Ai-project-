@@ -5,7 +5,7 @@ and preparing job-specific resume drafts.
 
 ## Portfolio projects
 
-Explore seven additional runnable projects in the [software engineering portfolio](portfolio/README.md):
+Explore nine additional runnable projects in the [software engineering portfolio](portfolio/README.md):
 
 - [Inventory Ledger](portfolio/inventory-ledger/) — transaction-safe stock movements, audit history, and retry protection.
 - [Airport Operations Analytics](portfolio/airport-analytics/) — validated CSV ingestion, repeatable SQL loads, and airport performance reports.
@@ -15,8 +15,11 @@ Explore seven additional runnable projects in the [software engineering portfoli
 - [Durable Job Queue](portfolio/durable-job-queue/) — restart-safe jobs, worker leases, retry backoff, and dead letters.
 - [Signed Webhook Receiver](portfolio/signed-webhook-receiver/) — Node.js 24 and TypeScript, signed requests, bounded replay protection, and HTTP tests.
 
-All seven include automated tests, synthetic examples, and documented design decisions.
-Run the Python portfolio tests with `python portfolio/run_tests.py`, and the C# API integration checks with `python portfolio/support-ticket-api/verify_api.py`.
+- [MCP Knowledge Tools](portfolio/mcp-knowledge-tools/) — official MCP SDK, read-only document tools, citations, and stdio integration tests.
+- [Ollama Request Gateway](portfolio/ollama-request-gateway/) — local model adapter with deadlines, overload protection, and circuit recovery.
+
+All nine include automated tests, synthetic examples, and documented design decisions.
+Install the MCP dependency with `python -m pip install -r portfolio/mcp-knowledge-tools/requirements.txt`. Run the Python portfolio tests with `python portfolio/run_tests.py`, and the C# API integration checks with `python portfolio/support-ticket-api/verify_api.py`.
 
 See the [technology review and verification commands](docs/technology-review.md) for current runtime coverage and fixes.
 
