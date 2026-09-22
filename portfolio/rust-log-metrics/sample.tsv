@@ -1,0 +1,4 @@
+service	status	latency_ms
+api	200	20
+api	503	100
+worker	200	40

@@ -5,7 +5,7 @@
 [![CareerDesk build](https://github.com/ssaka2/Ai-project-/actions/workflows/ci.yml/badge.svg)](https://github.com/ssaka2/Ai-project-/actions/workflows/ci.yml)
 [![Portfolio tests](https://github.com/ssaka2/Ai-project-/actions/workflows/portfolio.yml/badge.svg)](https://github.com/ssaka2/Ai-project-/actions/workflows/portfolio.yml)
 
-[Explore all 13 projects](portfolio/README.md) · [Run CareerDesk](#start-the-full-stack) · [Verification details](docs/technology-review.md)
+[Explore all 15 projects](portfolio/README.md) · [Run CareerDesk](#start-the-full-stack) · [Verification details](docs/technology-review.md)
 
 | Start with | What it demonstrates |
 | --- | --- |
@@ -13,13 +13,13 @@
 | **[MCP Knowledge Tools](portfolio/mcp-knowledge-tools/)** | Python agent tools, source citations, document snapshots, and actual MCP protocol tests |
 | **[Ollama Request Gateway](portfolio/ollama-request-gateway/)** | TypeScript / Node.js, request cancellation, timeouts, concurrency limits, and circuit recovery |
 
-**Technology in this repository:** C# · .NET 10 · SQL Server · Python · SQLite · TypeScript · Node.js 24 · MCP · Docker · GitHub Actions · Playwright
+**Technology in this repository:** C# · .NET 10 · SQL Server · Python · SQLite · TypeScript · Node.js 24 · Go · Rust · MCP · Docker · GitHub Actions · Playwright
 
-The root application is **AI CareerDesk**, a full-stack application for organizing IT job applications and preparing job-specific resume drafts. Twelve independent projects live in `portfolio/`.
+The root application is **AI CareerDesk**, a full-stack application for organizing IT job applications and preparing job-specific resume drafts. Fourteen independent projects live in `portfolio/`.
 
 ## Portfolio projects
 
-Explore twelve additional runnable projects in the [software engineering portfolio](portfolio/README.md):
+Explore fourteen additional runnable projects in the [software engineering portfolio](portfolio/README.md):
 
 - [Inventory Ledger](portfolio/inventory-ledger/) — transaction-safe stock movements, audit history, and retry protection.
 - [Airport Operations Analytics](portfolio/airport-analytics/) — validated CSV ingestion, repeatable SQL loads, and airport performance reports.
@@ -35,7 +35,10 @@ Explore twelve additional runnable projects in the [software engineering portfol
 - [AI Response Contract Lab](portfolio/ai-response-contract-lab/) — strict structured-output validation and a local Ollama adapter.
 - [Agent Memory Store](portfolio/agent-memory-store/) — persistent context with provenance, expiration, and namespace filtering.
 
-All twelve include automated tests, synthetic examples, and documented design decisions.
+- [Go Health Probe](portfolio/go-health-probe/) — concurrent HTTP checks with deadlines and ordered JSON results.
+- [Rust Log Metrics](portfolio/rust-log-metrics/) — validated log analysis, error rates, and p95 latency.
+
+All fourteen include automated tests, synthetic examples, and documented design decisions.
 Install the MCP dependency with `python -m pip install -r portfolio/mcp-knowledge-tools/requirements.txt -r portfolio/ai-response-contract-lab/requirements.txt`. Run the Python portfolio tests with `python portfolio/run_tests.py`, and the C# API integration checks with `python portfolio/support-ticket-api/verify_api.py`.
 
 See the [technology review and verification commands](docs/technology-review.md) for current runtime coverage and fixes.

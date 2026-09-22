@@ -20,6 +20,8 @@ Runnable projects demonstrating backend logic, relational data modeling, documen
 | [Agent Memory Store](agent-memory-store/) | Python, SQLite | Persistent context, provenance, expiration, lexical recall |
 
 | [AI Engineering Web Lab](ai-engineering-web-lab/) | JavaScript, static hosting | Interactive recorded-response checks and downloadable reports |
+| [Go Health Probe](go-health-probe/) | Go 1.27, HTTP | Bounded concurrency, deadlines, cancellation, race tests |
+| [Rust Log Metrics](rust-log-metrics/) | Rust 1.98.1 | Validated TSV ingestion, error rates, p95 latency, release binary |
 
 ## Quick start
 
@@ -64,3 +66,5 @@ These are portfolio demonstrations. No production use, performance benchmarks, o
 MCP Knowledge Tools and Ollama Request Gateway add agent tool integration and local inference infrastructure, inspired by current agent-development themes on [GitHub Trending](https://github.com/trending) (reviewed September 21, 2026). Run the gateway checks with `node --test portfolio/ollama-request-gateway/test_gateway.ts`. Its CI uses a mock endpoint; real generation requires a separately installed Ollama model. Both TypeScript projects have dedicated Node.js 24 CI jobs.
 
 The newest additions cover structured outputs and persistent agent memory. Both have runnable demos and automated tests. Contract Lab validates a synthetic response by default; optional Ollama generation requires a separately installed model. See each README for commands and limits.
+
+Go Health Probe and Rust Log Metrics add compiled backend and systems tooling. Their CI jobs build Linux executables, run real local demos, and publish downloadable artifacts. Each README includes local build instructions. These are two more project folders in the same repository, not separate repositories or hosted services.

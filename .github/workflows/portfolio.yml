@@ -102,3 +102,43 @@ jobs:
         run: |
           node --check dist/app.js
           node --test test-evaluate.mjs
+
+  go-health-probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version: '1.27.x'
+          cache: false
+      - name: Test concurrency, build, and run the local demo
+        working-directory: portfolio/go-health-probe
+        run: |
+          go vet ./...
+          go test -race -v ./...
+          go build -trimpath -o healthprobe .
+          ./healthprobe -demo
+      - uses: actions/upload-artifact@v7
+        with:
+          name: go-health-probe-linux
+          path: portfolio/go-health-probe/healthprobe
+  rust-log-metrics:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install verified stable Rust toolchain
+        run: rustup toolchain install 1.98.1 --profile minimal
+      - name: Test, build, and verify report output
+        working-directory: portfolio/rust-log-metrics
+        run: |
+          cargo +1.98.1 test --locked
+          cargo +1.98.1 build --release --locked
+          ./target/release/log-metrics --demo > /tmp/log-metrics-demo.json
+          ./target/release/log-metrics sample.tsv > /tmp/log-metrics-sample.json
+          python3 -c 'import json; a=json.load(open("/tmp/log-metrics-demo.json")); b=json.load(open("/tmp/log-metrics-sample.json")); assert a==b; assert a["services"][0]["server_errors"]==1; assert a["services"][0]["p95_ms"]==100'
+      - uses: actions/upload-artifact@v7
+        with:
+          name: rust-log-metrics-linux
+          path: portfolio/rust-log-metrics/target/release/log-metrics
