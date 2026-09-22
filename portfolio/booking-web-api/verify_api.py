@@ -1,4 +1,5 @@
 """Build and exercise the actual ASP.NET HTTP service using disposable data."""
+import argparse
 import json
 import os
 from pathlib import Path
@@ -25,15 +26,27 @@ def check(condition, name):
 
 
 def main():
-    subprocess.run(['dotnet', 'build', '-c', 'Release', '--nologo'], cwd=ROOT, check=True)
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--published-dir', type=Path, help='Verify a published package without building source')
+    args = parser.parse_args()
+    app_root = args.published_dir.resolve() if args.published_dir else ROOT
+    if args.published_dir:
+        dll = app_root / 'BookingApi.dll'
+        for relative in ['BookingApi.dll', 'BookingApi.deps.json', 'BookingApi.runtimeconfig.json',
+                         'wwwroot/index.html', 'wwwroot/app.js', 'wwwroot/style.css', 'client.py']:
+            if not (app_root / relative).is_file():
+                parser.error(f'Published package is missing {relative}')
+    else:
+        subprocess.run(['dotnet', 'build', '-c', 'Release', '--nologo'], cwd=ROOT, check=True)
+        dll = ROOT / 'bin/Release/net10.0/BookingApi.dll'
     with tempfile.TemporaryDirectory() as temp:
         data = Path(temp) / 'bookings.json'
         with socket.socket() as sock:
             sock.bind(('127.0.0.1', 0))
             port = sock.getsockname()[1]
         base = f'http://127.0.0.1:{port}'
-        env = os.environ | {'ASPNETCORE_URLS': base, 'BOOKING_DATA': str(data), 'ASPNETCORE_ENVIRONMENT': 'Development'}
-        command = ['dotnet', str(ROOT / 'bin/Release/net10.0/BookingApi.dll')]
+        env = os.environ | {'ASPNETCORE_URLS': base, 'BOOKING_DATA': str(data), 'ASPNETCORE_ENVIRONMENT': 'Production'}
+        command = ['dotnet', str(dll)]
         log = open(Path(temp) / 'service.log', 'w+')
         process = None
 
@@ -54,7 +67,7 @@ def main():
 
         def start():
             nonlocal process
-            process = subprocess.Popen(command, cwd=ROOT, env=env, stdout=log, stderr=subprocess.STDOUT)
+            process = subprocess.Popen(command, cwd=app_root, env=env, stdout=log, stderr=subprocess.STDOUT)
             for _ in range(100):
                 if process.poll() is not None:
                     raise RuntimeError('Service exited before readiness')
@@ -77,8 +90,10 @@ def main():
 
         try:
             start()
-            check(call('GET', '/')[0] == 200, 'browser interface served')
+            status, page, _ = call('GET', '/')
+            check(status == 200 and 'Appointment Desk' in page, 'browser interface served')
             check(call('GET', '/app.js')[0] == 200, 'browser API client served')
+            check(call('GET', '/style.css')[0] == 200, 'browser stylesheet served')
             check(call('GET', '/api/services')[1] == ['consultation', 'code-review', 'career-coaching'], 'service catalog')
             check(call('GET', '/api/bookings')[1] == [], 'empty booking list')
             tomorrow = datetime.now(timezone.utc).replace(second=0, microsecond=0) + timedelta(days=1)
@@ -107,11 +122,11 @@ def main():
             check(call('DELETE', location)[0] == 204 and call('GET', location)[0] == 404, 'cancellation removes resource')
             check(call('DELETE', location)[0] == 404, 'repeat cancellation returns not found')
             check(call('POST', '/api/bookings', body)[0] == 201, 'cancelled slot can be booked again')
-            subprocess.run([sys.executable, str(ROOT / 'client.py'), '--base', base, 'demo'], check=True)
+            subprocess.run([sys.executable, str(app_root / 'client.py'), '--base', base, 'demo'], check=True)
             check(len(call('GET', '/api/bookings')[1]) == len(before), 'Python web-service client cleans up its booking')
             stop()
             data.write_text('invalid store')
-            process = subprocess.Popen(command, cwd=ROOT, env=env, stdout=log, stderr=subprocess.STDOUT)
+            process = subprocess.Popen(command, cwd=app_root, env=env, stdout=log, stderr=subprocess.STDOUT)
             check(process.wait(timeout=15) != 0, 'corrupt persisted data fails startup')
             print(f'{checks} HTTP and persistence checks passed.', flush=True)
         except Exception:

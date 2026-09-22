@@ -162,3 +162,15 @@ jobs:
         run: |
           node --check portfolio/booking-web-api/wwwroot/app.js
           python portfolio/booking-web-api/verify_api.py
+      - name: Publish portable application package
+        run: |
+          dotnet publish portfolio/booking-web-api/BookingApi.csproj -c Release --no-restore -p:UseAppHost=false -o "$RUNNER_TEMP/booking-web-api-release"
+          cp portfolio/booking-web-api/README.md portfolio/booking-web-api/client.py portfolio/booking-web-api/verify_api.py "$RUNNER_TEMP/booking-web-api-release/"
+      - name: Verify the published package in Production mode
+        run: python "$RUNNER_TEMP/booking-web-api-release/verify_api.py" --published-dir "$RUNNER_TEMP/booking-web-api-release"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: booking-web-api-release
+          path: ${{ runner.temp }}/booking-web-api-release/
+          if-no-files-found: error
+          retention-days: 30
