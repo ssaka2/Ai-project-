@@ -74,6 +74,21 @@ python portfolio/booking-web-api/verify_api.py
 
 CI verifies both the source build and the published package, with 26 HTTP and persistence checks each in Production mode. The verifier builds the app by default and runs a real HTTP server using a temporary database file. It tests the UI assets, CRUD, validation, concurrent conflicts, restart persistence, corrupted data, and the separate Python client. No external database or paid account is needed.
 
+### Browser verification
+
+CI also exercises the published package in Chromium, Firefox, WebKit, and a narrow Chromium viewport. It checks booking and cancellation, duplicate feedback, reloads, local-to-UTC conversion, safe text rendering, and recovery after a simulated failed refresh. Screenshots, traces, and server logs are saved as the `booking-browser-results` artifact for 14 days. This verifies browser behavior on Linux; it is not testing physical mobile devices.
+
+Run the same checks from the repository root with Python 3.11+ and .NET 10 SDK:
+
+```sh
+python -m pip install -r portfolio/booking-web-api/requirements-browser.txt
+python -m playwright install --with-deps chromium firefox webkit
+dotnet publish portfolio/booking-web-api/BookingApi.csproj -c Release -p:UseAppHost=false -o /tmp/booking-published
+python portfolio/booking-web-api/verify_browser.py --published-dir /tmp/booking-published --output /tmp/booking-browser-results
+```
+
+Browser tests start their own server with temporary booking data. They require Playwright only for testing, not for running the application. Assertions use [Playwright's automatic waiting](https://playwright.dev/python/docs/test-assertions).
+
 ## Design and limits
 
 Writes serialize within one application process and atomically replace the JSON file after flushing. In-memory state changes only after a successful replacement. Use one process per data file; there is no cross-process lock or distributed coordination. The whole dataset is kept in memory, so this is intended for small demos. A database and migrations would be required for a larger service. `/health` is a liveness check, not a guarantee that a future storage write will succeed.

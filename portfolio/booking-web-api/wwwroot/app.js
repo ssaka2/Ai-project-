@@ -34,7 +34,12 @@ $('booking').addEventListener('submit', async e => {
   } catch(e) { $('message').textContent=e.message; }
   finally { $('submit').disabled=false; }
 });
-$('refresh').addEventListener('click', () => refresh().catch(e => $('message').textContent=e.message));
+$('refresh').addEventListener('click', async () => {
+  $('refresh').disabled = true;
+  try { await refresh(); $('message').textContent = 'Appointments refreshed.'; }
+  catch(e) { $('message').textContent = e.message; }
+  finally { $('refresh').disabled = false; }
+});
 (async () => {
   try {
     const services=await api('/api/services');
