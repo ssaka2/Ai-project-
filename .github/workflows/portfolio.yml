@@ -142,3 +142,23 @@ jobs:
         with:
           name: rust-log-metrics-linux
           path: portfolio/rust-log-metrics/target/release/log-metrics
+
+  booking-web-api:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Check browser script and verify real HTTP booking workflows
+        run: |
+          node --check portfolio/booking-web-api/wwwroot/app.js
+          python portfolio/booking-web-api/verify_api.py

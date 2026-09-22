@@ -22,6 +22,7 @@ Runnable projects demonstrating backend logic, relational data modeling, documen
 | [AI Engineering Web Lab](ai-engineering-web-lab/) | JavaScript, static hosting | Interactive recorded-response checks and downloadable reports |
 | [Go Health Probe](go-health-probe/) | Go 1.27, HTTP | Bounded concurrency, deadlines, cancellation, race tests |
 | [Rust Log Metrics](rust-log-metrics/) | Rust 1.98.1 | Validated TSV ingestion, error rates, p95 latency, release binary |
+| [Appointment Booking Web API](booking-web-api/) | ASP.NET Core, JavaScript, Python client | REST service, browser UI, concurrent booking protection, persistence |
 
 ## Quick start
 
