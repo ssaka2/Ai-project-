@@ -5,7 +5,7 @@
 [![CareerDesk build](https://github.com/ssaka2/Ai-project-/actions/workflows/ci.yml/badge.svg)](https://github.com/ssaka2/Ai-project-/actions/workflows/ci.yml)
 [![Portfolio tests](https://github.com/ssaka2/Ai-project-/actions/workflows/portfolio.yml/badge.svg)](https://github.com/ssaka2/Ai-project-/actions/workflows/portfolio.yml)
 
-[Explore all 16 projects](portfolio/README.md) · [Run CareerDesk](#start-the-full-stack) · [Verification details](docs/technology-review.md)
+[Try the live demo](https://sandeep-ai-engineering-lab.ssaka2.chatgpt.site) · [Explore all 16 projects](portfolio/README.md) · [Download built projects](portfolio/README.md#download-built-projects) · [Run CareerDesk](#start-the-full-stack)
 
 | Start with | What it demonstrates |
 | --- | --- |
@@ -16,6 +16,18 @@
 **Technology in this repository:** C# · .NET 10 · SQL Server · Python · SQLite · TypeScript · Node.js 24 · Go · Rust · MCP · Docker · GitHub Actions · Playwright
 
 The root application is **AI CareerDesk**, a full-stack application for organizing IT job applications and preparing job-specific resume drafts. Fifteen independent projects live in `portfolio/`.
+
+## Try a project
+
+| Project | How to try it | What you need |
+| --- | --- | --- |
+| [AI Engineering Web Lab](https://sandeep-ai-engineering-lab.ssaka2.chatgpt.site) | Open the live demo, check a recorded response, and download its report | A browser |
+| [Appointment Booking Web API](portfolio/booking-web-api/#download-the-ready-built-package) | Download the tested package, start it locally, and book or cancel a synthetic appointment | ASP.NET Core Runtime 10 |
+| [AI CareerDesk](#start-the-full-stack) | Start the local Docker stack, register, and track job applications | Docker Compose with Linux containers |
+| [Go Health Probe](portfolio/go-health-probe/) | Run concurrent HTTP health checks with a local demo | Go SDK, or the Linux build artifact |
+| [Rust Log Metrics](portfolio/rust-log-metrics/) | Turn sample request logs into JSON metrics | Rust toolchain, or the Linux build artifact |
+
+The Web Lab is hosted publicly. Other entries above run on your computer. These are **16 projects in one repository**: CareerDesk at the root and 15 project folders.
 
 ## Portfolio projects
 
@@ -35,6 +47,7 @@ Explore fifteen additional runnable projects in the [software engineering portfo
 - [AI Response Contract Lab](portfolio/ai-response-contract-lab/) — strict structured-output validation and a local Ollama adapter.
 - [Agent Memory Store](portfolio/agent-memory-store/) — persistent context with provenance, expiration, and namespace filtering.
 
+- [AI Engineering Web Lab](portfolio/ai-engineering-web-lab/) — browser-based recorded-response checks and downloadable reports.
 - [Go Health Probe](portfolio/go-health-probe/) — concurrent HTTP checks with deadlines and ordered JSON results.
 - [Rust Log Metrics](portfolio/rust-log-metrics/) — validated log analysis, error rates, and p95 latency.
 
@@ -121,7 +134,7 @@ Playwright, Docker Compose, and GitHub Actions.
 | src/AiCareerDesk.Web/Models | Entities and validated inputs |
 | src/AiCareerDesk.Web/Data | DbContext, design-time factory, migrations |
 | src/AiCareerDesk.Web/Services | Owner-scoped operations, AI, SMTP |
-| tests/AiCareerDesk.Web.Tests | Service, SQL Server, HTTP, Chromium tests |
+| tests/AiCareerDesk.Web.Tests | Service, SQL Server, HTTP, Chromium/Firefox/WebKit tests |
 | Dockerfile, compose.yaml | Local full-stack deployment |
 | scripts | Local configuration setup |
 | docs | Scope, setup, backlog, verification |

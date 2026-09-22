@@ -1,6 +1,8 @@
 # Software engineering portfolio
 
-Runnable projects demonstrating backend logic, relational data modeling, document retrieval, and AI evaluation. All bundled examples use synthetic data and run locally without paid services.
+16 projects in one repository, covering backend services, relational data, document retrieval, AI evaluation, browser interfaces, and systems tooling. CareerDesk lives at the root; the other 15 projects have their own folders below. Bundled examples use synthetic data and can run locally without paid services.
+
+[Open the live Web Lab](https://sandeep-ai-engineering-lab.ssaka2.chatgpt.site) · [Download built projects](#download-built-projects) · [Local setup](#quick-start)
 
 [![Portfolio tests](https://github.com/ssaka2/Ai-project-/actions/workflows/portfolio.yml/badge.svg)](https://github.com/ssaka2/Ai-project-/actions/workflows/portfolio.yml)
 
@@ -18,11 +20,26 @@ Runnable projects demonstrating backend logic, relational data modeling, documen
 | [Ollama Request Gateway](ollama-request-gateway/) | TypeScript, Node.js 24 | Local inference adapter, deadlines, concurrency, circuit breaker |
 | [AI Response Contract Lab](ai-response-contract-lab/) | Python, JSON Schema, Ollama | Model contracts, response validation, HTTP adapter |
 | [Agent Memory Store](agent-memory-store/) | Python, SQLite | Persistent context, provenance, expiration, lexical recall |
-
 | [AI Engineering Web Lab](ai-engineering-web-lab/) | JavaScript, static hosting | Interactive recorded-response checks and downloadable reports |
 | [Go Health Probe](go-health-probe/) | Go 1.27, HTTP | Bounded concurrency, deadlines, cancellation, race tests |
 | [Rust Log Metrics](rust-log-metrics/) | Rust 1.98.1 | Validated TSV ingestion, error rates, p95 latency, release binary |
 | [Appointment Booking Web API](booking-web-api/) | ASP.NET Core, JavaScript, Python client | REST service, browser UI, concurrent booking protection, persistence |
+
+## Download built projects
+
+Open [Portfolio tests](https://github.com/ssaka2/Ai-project-/actions/workflows/portfolio.yml), choose a successful run on **main**, and scroll to **Artifacts**. GitHub sign-in may be required. These are workflow downloads, not GitHub Releases.
+
+| Artifact | Contents | Runtime or platform |
+| --- | --- | --- |
+| `booking-web-api-release` | Booking API, browser assets, Python client, and run instructions | ASP.NET Core Runtime 10; tested on Linux |
+| `go-health-probe-linux` | Compiled health-check command | Linux x64 |
+| `rust-log-metrics-linux` | Compiled log analysis command | Linux x64 |
+| `agent-evaluation-python-3.13` | Sample evaluation reports | Browser or text editor |
+| `booking-browser-results` | Browser screenshots, traces, and server log | Screenshots open directly; traces use Playwright |
+
+Extract an artifact before use. The booking package expires after 30 days; browser evidence expires after 14 days. Pick a newer successful run if an older download has expired. Follow the project README for startup commands and prerequisites; the booking package includes its README.
+
+The [Web Lab](https://sandeep-ai-engineering-lab.ssaka2.chatgpt.site) is the publicly hosted browser demo. Downloading these other artifacts does not deploy a public service.
 
 ## Quick start
 
@@ -42,7 +59,14 @@ python portfolio/airport-analytics/pipeline.py portfolio/airport-analytics/sampl
 
 These commands verify local projects; GitHub repository links do not launch a hosted application. To run CareerDesk in a browser, follow the [Docker setup](../README.md#start-the-full-stack) and open `http://localhost:8080` on the same computer.
 
-Run the C# API integration checks separately with `python portfolio/support-ticket-api/verify_api.py`.
+Run the C# API integration checks separately:
+
+```sh
+python portfolio/support-ticket-api/verify_api.py
+python portfolio/booking-web-api/verify_api.py
+```
+
+Both require the .NET 10 SDK. Booking also has [cross-browser verification instructions](booking-web-api/#browser-verification).
 
 The webhook project requires Node.js 24. Run `node --test portfolio/signed-webhook-receiver/test_server.ts`.
 
@@ -66,6 +90,6 @@ These are portfolio demonstrations. No production use, performance benchmarks, o
 
 MCP Knowledge Tools and Ollama Request Gateway add agent tool integration and local inference infrastructure, inspired by current agent-development themes on [GitHub Trending](https://github.com/trending) (reviewed September 21, 2026). Run the gateway checks with `node --test portfolio/ollama-request-gateway/test_gateway.ts`. Its CI uses a mock endpoint; real generation requires a separately installed Ollama model. Both TypeScript projects have dedicated Node.js 24 CI jobs.
 
-The newest additions cover structured outputs and persistent agent memory. Both have runnable demos and automated tests. Contract Lab validates a synthetic response by default; optional Ollama generation requires a separately installed model. See each README for commands and limits.
+Additional AI projects cover structured outputs and persistent agent memory. Both have runnable demos and automated tests. Contract Lab validates a synthetic response by default; optional Ollama generation requires a separately installed model. See each README for commands and limits.
 
 Go Health Probe and Rust Log Metrics add compiled backend and systems tooling. Their CI jobs build Linux executables, run real local demos, and publish downloadable artifacts. Each README includes local build instructions. These are two more project folders in the same repository, not separate repositories or hosted services.
