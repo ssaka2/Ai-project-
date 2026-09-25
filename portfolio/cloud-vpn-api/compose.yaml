@@ -1,0 +1,15 @@
+services:
+  api:
+    build: .
+    environment:
+      VPN_API_TOKEN: ${VPN_API_TOKEN:?Set a generated VPN_API_TOKEN first}
+    ports:
+      - "127.0.0.1:8090:8090"
+    volumes:
+      - vpn-data:/data
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+volumes:
+  vpn-data:
