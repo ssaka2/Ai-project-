@@ -5,7 +5,7 @@
 [![CareerDesk build](https://github.com/ssaka2/Ai-project-/actions/workflows/ci.yml/badge.svg)](https://github.com/ssaka2/Ai-project-/actions/workflows/ci.yml)
 [![Portfolio tests](https://github.com/ssaka2/Ai-project-/actions/workflows/portfolio.yml/badge.svg)](https://github.com/ssaka2/Ai-project-/actions/workflows/portfolio.yml)
 
-[Try the live demo](https://sandeep-ai-engineering-lab.ssaka2.chatgpt.site) · [Explore all 17 projects](portfolio/README.md) · [Download built projects](portfolio/README.md#download-built-projects) · [Run CareerDesk](#start-the-full-stack)
+[Try the live demo](https://sandeep-ai-engineering-lab.ssaka2.chatgpt.site) · [Explore all 19 projects](portfolio/README.md) · [Download built projects](portfolio/README.md#download-built-projects) · [Run CareerDesk](#start-the-full-stack)
 
 | Start with | What it demonstrates |
 | --- | --- |
@@ -15,7 +15,7 @@
 
 **Technology in this repository:** C# · .NET 10 · SQL Server · Python · SQLite · TypeScript · Node.js 24 · Go · Rust · MCP · Docker · GitHub Actions · Playwright
 
-The root application is **AI CareerDesk**, a full-stack application for organizing IT job applications and preparing job-specific resume drafts. Sixteen independent projects live in `portfolio/`.
+The root application is **AI CareerDesk**, a full-stack application for organizing IT job applications and preparing job-specific resume drafts. Eighteen independent projects live in `portfolio/`.
 
 ## Try a project
 
@@ -27,11 +27,20 @@ The root application is **AI CareerDesk**, a full-stack application for organizi
 | [Go Health Probe](portfolio/go-health-probe/) | Run concurrent HTTP health checks with a local demo | Go SDK, or the Linux build artifact |
 | [Rust Log Metrics](portfolio/rust-log-metrics/) | Turn sample request logs into JSON metrics | Rust toolchain, or the Linux build artifact |
 
-The Web Lab is hosted publicly. Other entries above run on your computer. These are **17 projects in one repository**: CareerDesk at the root and 16 project folders.
+The Web Lab is hosted publicly. Other entries above run on your computer. These are **19 projects in one repository**: CareerDesk at the root and 18 project folders.
+
+## Recent additions
+
+| Project | What to review |
+| --- | --- |
+| [Agent Approval Queue](portfolio/agent-approval-queue/) | Exact-argument approvals, expiration, idempotent submissions, and one-time consumption under concurrent workers |
+| [OpenTelemetry Trace Inspector](portfolio/otel-trace-inspector/) | OTLP/JSON parsing, precise timestamp arithmetic, trace graph validation, and partial-export diagnostics |
+
+Both include runnable synthetic demos, focused tests, design trade-offs, and explicit limits. They demonstrate engineering practice without requiring paid model APIs.
 
 ## Portfolio projects
 
-Explore sixteen additional runnable projects in the [software engineering portfolio](portfolio/README.md):
+Explore eighteen additional runnable projects in the [software engineering portfolio](portfolio/README.md):
 
 - [Inventory Ledger](portfolio/inventory-ledger/) — transaction-safe stock movements, audit history, and retry protection.
 - [Airport Operations Analytics](portfolio/airport-analytics/) — validated CSV ingestion, repeatable SQL loads, and airport performance reports.
@@ -51,10 +60,12 @@ Explore sixteen additional runnable projects in the [software engineering portfo
 - [Go Health Probe](portfolio/go-health-probe/) — concurrent HTTP checks with deadlines and ordered JSON results.
 - [Rust Log Metrics](portfolio/rust-log-metrics/) — validated log analysis, error rates, and p95 latency.
 
+- [Agent Approval Queue](portfolio/agent-approval-queue/) — persistent human-review state for agent tool requests, expiration, and atomic approval consumption.
+- [OpenTelemetry Trace Inspector](portfolio/otel-trace-inspector/) — TypeScript trace analysis with exact nanosecond durations, error counts, and missing-parent warnings.
 - [Cloud VPN Management Web API](portfolio/cloud-vpn-api/) — authenticated WireGuard peer management, SQLite persistence, Docker cloud-server packaging, and tunnel integration tests.
 - [Appointment Booking Web API](portfolio/booking-web-api/) — browser UI, REST endpoints, persistent appointments, and a Python web-service client.
 
-All sixteen include automated tests, synthetic examples, and documented design decisions.
+All eighteen include automated tests, synthetic examples, and documented design decisions.
 Install the MCP dependency with `python -m pip install -r portfolio/mcp-knowledge-tools/requirements.txt -r portfolio/ai-response-contract-lab/requirements.txt`. Run the Python portfolio tests with `python portfolio/run_tests.py`, and the C# API integration checks with `python portfolio/support-ticket-api/verify_api.py`.
 
 See the [technology review and verification commands](docs/technology-review.md) for current runtime coverage and fixes.

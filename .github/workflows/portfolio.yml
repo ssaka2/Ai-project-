@@ -24,6 +24,8 @@ jobs:
           python -m pip check
       - name: Run MCP client demo
         run: python portfolio/mcp-knowledge-tools/demo.py
+      - name: Demonstrate agent approval lifecycle
+        run: python portfolio/agent-approval-queue/demo.py
       - name: Run structured-output and agent-memory demos
         run: |
           python portfolio/ai-response-contract-lab/contracts.py --schema portfolio/ai-response-contract-lab/schema.json --response portfolio/ai-response-contract-lab/response.json
@@ -220,3 +222,23 @@ jobs:
       - name: Remove disposable containers and data
         if: always()
         run: docker compose down -v
+
+  otel-trace-inspector:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Verify trace analysis and produce sample report
+        working-directory: portfolio/otel-trace-inspector
+        run: |
+          npm test
+          node inspect.ts sample.json > report.json
+      - uses: actions/upload-artifact@v7
+        with:
+          name: otel-trace-report
+          path: portfolio/otel-trace-inspector/report.json
+          if-no-files-found: error

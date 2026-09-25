@@ -1,6 +1,6 @@
 # Software engineering portfolio
 
-17 projects in one repository, covering backend services, relational data, document retrieval, AI evaluation, browser interfaces, and systems tooling. CareerDesk lives at the root; the other 16 projects have their own folders below. Bundled examples use synthetic data and can run locally without paid services.
+19 projects in one repository, covering backend services, relational data, document retrieval, AI evaluation, browser interfaces, and systems tooling. CareerDesk lives at the root; the other 18 projects have their own folders below. Bundled examples use synthetic data and can run locally without paid services.
 
 [Open the live Web Lab](https://sandeep-ai-engineering-lab.ssaka2.chatgpt.site) · [Download built projects](#download-built-projects) · [Local setup](#quick-start)
 
@@ -25,6 +25,8 @@
 | [Rust Log Metrics](rust-log-metrics/) | Rust 1.98.1 | Validated TSV ingestion, error rates, p95 latency, release binary |
 | [Appointment Booking Web API](booking-web-api/) | ASP.NET Core, JavaScript, Python client | REST service, browser UI, concurrent booking protection, persistence |
 | [Cloud VPN Management Web API](cloud-vpn-api/) | Python, SQLite, Docker, WireGuard | Authenticated peer registry, configuration export, tunnel and revocation checks |
+| [Agent Approval Queue](agent-approval-queue/) | Python, SQLite | Human-review state, exact argument binding, expiry, atomic consumption |
+| [OpenTelemetry Trace Inspector](otel-trace-inspector/) | TypeScript, Node.js 24, OTLP/JSON | Nanosecond precision, trace relationships, p95 and error reports |
 
 ## Download built projects
 
@@ -44,7 +46,7 @@ The [Web Lab](https://sandeep-ai-engineering-lab.ssaka2.chatgpt.site) is the pub
 
 ## Quick start
 
-Install Python 3.11 or newer. Seven Python projects use only the standard library; MCP Knowledge Tools additionally requires the pinned MCP SDK. AI Response Contract Lab requires the pinned jsonschema dependency. Support Ticket API additionally requires the .NET 10 SDK. Knowledge Search also requires SQLite built with FTS5, which is verified by its tests.
+Install Python 3.11 or newer. Eight Python projects use only the standard library; MCP Knowledge Tools additionally requires the pinned MCP SDK. AI Response Contract Lab requires the pinned jsonschema dependency. Support Ticket API additionally requires the .NET 10 SDK. Knowledge Search also requires SQLite built with FTS5, which is verified by its tests.
 
 ```sh
 git clone https://github.com/ssaka2/Ai-project-.git
@@ -85,7 +87,7 @@ Each project has its own entry point, test suite, setup instructions, design dec
 
 The retrieval and evaluation projects demonstrate retrieval and agent evaluation, motivated by [contextual retrieval engineering](https://www.anthropic.com/engineering/contextual-retrieval) and [agent evaluation practices published in January 2026](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents). These are topic choices, not a claim that these repositories appear on GitHub Trending.
 
-The portfolio workflow tests all nine Python projects on Python 3.11, 3.12, 3.13, and 3.14 and publishes downloadable example evaluation reports as workflow artifacts. A separate job builds the Support Ticket API and runs 13 HTTP integration checks. AI CareerDesk has its own .NET/SQL Server/browser/Docker workflow.
+The portfolio workflow tests all ten Python projects on Python 3.11, 3.12, 3.13, and 3.14 and publishes downloadable example evaluation reports as workflow artifacts. A separate job builds the Support Ticket API and runs 13 HTTP integration checks. AI CareerDesk has its own .NET/SQL Server/browser/Docker workflow.
 
 These are portfolio demonstrations. No production use, performance benchmarks, or business impact is claimed. No license has been selected; the parent repository's licensing status applies.
 
