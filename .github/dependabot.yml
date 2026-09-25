@@ -26,3 +26,36 @@ updates:
     directory: /portfolio/ai-response-contract-lab
     schedule:
       interval: weekly
+  - package-ecosystem: pip
+    directory: /portfolio/booking-web-api
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 3
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 3
+    groups:
+      dotnet-images:
+        patterns:
+          - mcr.microsoft.com/dotnet/*
+        update-types:
+          - minor
+          - patch
+    ignore:
+      - dependency-name: mcr.microsoft.com/dotnet/*
+        update-types:
+          - version-update:semver-major
+  - package-ecosystem: docker-compose
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 3
+    allow:
+      - dependency-name: axllent/mailpit
+      - dependency-name: mcr.microsoft.com/mssql/server
+    ignore:
+      - dependency-name: mcr.microsoft.com/mssql/server
+        update-types:
+          - version-update:semver-major
