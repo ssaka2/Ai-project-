@@ -1,78 +1,53 @@
-# Sai Sandeep Saka · Software Engineering Portfolio
+<div align="center">
 
-**Backend applications, reliable data workflows, and practical AI tooling.**
+# Sai Sandeep Saka
+### Backend engineering · Data systems · Practical AI tooling
 
-[![CareerDesk build](https://github.com/ssaka2/Ai-project-/actions/workflows/ci.yml/badge.svg)](https://github.com/ssaka2/Ai-project-/actions/workflows/ci.yml)
-[![Portfolio tests](https://github.com/ssaka2/Ai-project-/actions/workflows/portfolio.yml/badge.svg)](https://github.com/ssaka2/Ai-project-/actions/workflows/portfolio.yml)
+C# and ASP.NET Core applications, dependable services, and tools that make AI workflows easier to inspect.
 
-[Try the live demo](https://sandeep-ai-engineering-lab.ssaka2.chatgpt.site) · [Explore all 19 projects](portfolio/README.md) · [Download built projects](portfolio/README.md#download-built-projects) · [Run CareerDesk](#start-the-full-stack)
+[Explore 19 projects](portfolio/README.md) · [Try the Web Lab](https://sandeep-ai-engineering-lab.ssaka2.chatgpt.site) · [Run CareerDesk](#start-the-full-stack) · [Verification report](docs/vm-verification-2026-10-02.md)
 
-| Start with | What it demonstrates |
-| --- | --- |
-| **AI CareerDesk** | C# / ASP.NET Core, EF Core, SQL Server, private job tracking, and resume workflows |
-| **[MCP Knowledge Tools](portfolio/mcp-knowledge-tools/)** | Python agent tools, source citations, document snapshots, and actual MCP protocol tests |
-| **[Ollama Request Gateway](portfolio/ollama-request-gateway/)** | TypeScript / Node.js, request cancellation, timeouts, concurrency limits, and circuit recovery |
+[![CareerDesk build](https://github.com/ssaka2/Ai-project-/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/ssaka2/Ai-project-/actions/workflows/ci.yml)
+[![Portfolio tests](https://github.com/ssaka2/Ai-project-/actions/workflows/portfolio.yml/badge.svg?branch=main)](https://github.com/ssaka2/Ai-project-/actions/workflows/portfolio.yml)
 
-**Technology in this repository:** C# · .NET 10 · SQL Server · Python · SQLite · TypeScript · Node.js 24 · Go · Rust · MCP · Docker · GitHub Actions · Playwright
+</div>
 
-The root application is **AI CareerDesk**, a full-stack application for organizing IT job applications and preparing job-specific resume drafts. Eighteen independent projects live in `portfolio/`.
+---
 
-## Try a project
+## Featured engineering
 
-| Project | How to try it | What you need |
+| Project | What it demonstrates | Stack |
 | --- | --- | --- |
-| [AI Engineering Web Lab](https://sandeep-ai-engineering-lab.ssaka2.chatgpt.site) | Open the live demo, check a recorded response, and download its report | A browser |
-| [Appointment Booking Web API](portfolio/booking-web-api/#download-the-ready-built-package) | Download the tested package, start it locally, and book or cancel a synthetic appointment | ASP.NET Core Runtime 10 |
-| [AI CareerDesk](#start-the-full-stack) | Start the local Docker stack, register, and track job applications | Docker Compose with Linux containers |
-| [Go Health Probe](portfolio/go-health-probe/) | Run concurrent HTTP health checks with a local demo | Go SDK, or the Linux build artifact |
-| [Rust Log Metrics](portfolio/rust-log-metrics/) | Turn sample request logs into JSON metrics | Rust toolchain, or the Linux build artifact |
+| **[AI CareerDesk](#start-the-full-stack)** | Private application tracking, resume drafts, account isolation, real database and browser tests | C# · ASP.NET Core · SQL Server |
+| **[Appointment Booking API](portfolio/booking-web-api/)** | Browser workflows, concurrent booking protection, restart persistence | .NET · JavaScript · Playwright |
+| **[MCP Knowledge Tools](portfolio/mcp-knowledge-tools/)** | Read-only agent tools, document snapshots, source citations, protocol tests | Python · MCP |
+| **[Cloud VPN API](portfolio/cloud-vpn-api/)** | Authenticated peer management, container persistence, tested WireGuard revocation | Python · Docker · WireGuard |
+| **[OpenTelemetry Trace Inspector](portfolio/otel-trace-inspector/)** | Trace relationships, exact timestamp arithmetic, error and latency reports | TypeScript · Node.js |
+| **[Go Health Probe](portfolio/go-health-probe/)** | Bounded concurrency, cancellation, HTTP deadlines and race tests | Go |
 
-The Web Lab is hosted publicly. Other entries above run on your computer. These are **19 projects in one repository**: CareerDesk at the root and 18 project folders.
+## Choose your route
 
-## Recent additions
-
-| Project | What to review |
+| Interested in | Start here |
 | --- | --- |
-| [Agent Approval Queue](portfolio/agent-approval-queue/) | Exact-argument approvals, expiration, idempotent submissions, and one-time consumption under concurrent workers |
-| [OpenTelemetry Trace Inspector](portfolio/otel-trace-inspector/) | OTLP/JSON parsing, precise timestamp arithmetic, trace graph validation, and partial-export diagnostics |
+| Reviewing my work | [Five-minute project guide](docs/project-guide.md) |
+| Running something immediately | [Browser Web Lab](https://sandeep-ai-engineering-lab.ssaka2.chatgpt.site) |
+| Backend and database engineering | [CareerDesk setup](#start-the-full-stack) · [Inventory Ledger](portfolio/inventory-ledger/) · [Durable Job Queue](portfolio/durable-job-queue/) |
+| AI and agent infrastructure | [Evaluation Lab](portfolio/agent-evaluation-lab/) · [Approval Queue](portfolio/agent-approval-queue/) · [Ollama Gateway](portfolio/ollama-request-gateway/) |
+| Finding every project or a ready-built package | [Complete catalog](portfolio/README.md) · [Build downloads](portfolio/README.md#download-built-projects) |
+| Running on a development VM | [Setup and commands](docs/portfolio-vm.md) · [Recorded verification](docs/vm-verification-2026-10-02.md) |
 
-Both include runnable synthetic demos, focused tests, design trade-offs, and explicit limits. They demonstrate engineering practice without requiring paid model APIs.
+**19 projects, one repository.** CareerDesk is the root application; 18 independent projects live in `portfolio/`. The Web Lab is a public browser demo. Other applications run locally or on a configured development VM.
 
-## Portfolio projects
+**Engineering focus:** ownership boundaries · transactions · idempotency · concurrency · recovery · observable behavior.
 
-Explore eighteen additional runnable projects in the [software engineering portfolio](portfolio/README.md):
+**Technology:** C# / .NET 10 · SQL Server · Python · SQLite · TypeScript / Node.js 24 · Go · Rust · Docker · GitHub Actions · Playwright.
 
-- [Inventory Ledger](portfolio/inventory-ledger/) — transaction-safe stock movements, audit history, and retry protection.
-- [Airport Operations Analytics](portfolio/airport-analytics/) — validated CSV ingestion, repeatable SQL loads, and airport performance reports.
-- [Local Knowledge Search](portfolio/local-knowledge-search/) — offline BM25 retrieval with source citations and relevance checks.
-- [Agent Evaluation Lab](portfolio/agent-evaluation-lab/) — recorded AI response grading, baseline regression gates, and HTML reports.
-- [Support Ticket API](portfolio/support-ticket-api/) — C# REST API with persistent status history and stale-edit protection.
-- [Durable Job Queue](portfolio/durable-job-queue/) — restart-safe jobs, worker leases, retry backoff, and dead letters.
-- [Signed Webhook Receiver](portfolio/signed-webhook-receiver/) — Node.js 24 and TypeScript, signed requests, bounded replay protection, and HTTP tests.
+## Evidence you can inspect
 
-- [MCP Knowledge Tools](portfolio/mcp-knowledge-tools/) — official MCP SDK, read-only document tools, citations, and stdio integration tests.
-- [Ollama Request Gateway](portfolio/ollama-request-gateway/) — local model adapter with deadlines, overload protection, and circuit recovery.
-
-- [AI Response Contract Lab](portfolio/ai-response-contract-lab/) — strict structured-output validation and a local Ollama adapter.
-- [Agent Memory Store](portfolio/agent-memory-store/) — persistent context with provenance, expiration, and namespace filtering.
-
-- [AI Engineering Web Lab](portfolio/ai-engineering-web-lab/) — browser-based recorded-response checks and downloadable reports.
-- [Go Health Probe](portfolio/go-health-probe/) — concurrent HTTP checks with deadlines and ordered JSON results.
-- [Rust Log Metrics](portfolio/rust-log-metrics/) — validated log analysis, error rates, and p95 latency.
-
-- [Agent Approval Queue](portfolio/agent-approval-queue/) — persistent human-review state for agent tool requests, expiration, and atomic approval consumption.
-- [OpenTelemetry Trace Inspector](portfolio/otel-trace-inspector/) — TypeScript trace analysis with exact nanosecond durations, error counts, and missing-parent warnings.
-- [Cloud VPN Management Web API](portfolio/cloud-vpn-api/) — authenticated WireGuard peer management, SQLite persistence, Docker cloud-server packaging, and tunnel integration tests.
-- [Appointment Booking Web API](portfolio/booking-web-api/) — browser UI, REST endpoints, persistent appointments, and a Python web-service client.
-
-All eighteen include automated tests, synthetic examples, and documented design decisions.
-Install the MCP dependency with `python -m pip install -r portfolio/mcp-knowledge-tools/requirements.txt -r portfolio/ai-response-contract-lab/requirements.txt`. Run the Python portfolio tests with `python portfolio/run_tests.py`, and the C# API integration checks with `python portfolio/support-ticket-api/verify_api.py`.
-
-See the [technology review and verification commands](docs/technology-review.md) for current runtime coverage and fixes.
-
-## Deployed browser demo
-
-[AI Engineering Web Lab](https://sandeep-ai-engineering-lab.ssaka2.chatgpt.site) provides interactive response checks and downloadable reports. Public access is enabled; anyone with the link can open the browser demo. [Source and local setup](portfolio/ai-engineering-web-lab/). The linked backend applications are not deployed by this Site.
+- [Application CI](.github/workflows/ci.yml) builds CareerDesk, audits dependencies, runs SQL and browser tests, and verifies Docker restart.
+- [Portfolio CI](.github/workflows/portfolio.yml) tests Python 3.11–3.14 and the .NET, Node.js, Go, Rust, and VPN projects.
+- [VM verification](docs/vm-verification-2026-10-02.md) records 66/66 CareerDesk tests, four booking browser configurations, and container/tunnel checks against a specific commit.
+- Every project documents setup and limits. Synthetic examples work without paid model APIs; real Ollama inference needs a separately installed model.
 
 ## What you can do
 

@@ -1,19 +1,15 @@
-# GitHub profile setup
+# Publish the profile README
 
-The finished profile README is in [README.md](README.md). Its links are absolute so it can be copied unchanged to the public `ssaka2/ssaka2` profile repository as `README.md`.
+The [profile README](README.md) is ready to copy into the public `ssaka2/ssaka2` repository as its root `README.md`. Its links are absolute. This file in Ai-project- does not itself change the account overview.
 
-Suggested account fields:
+## Suggested profile fields
 
 - Name: Sai Sandeep Saka
-- Bio: Software developer | C#, ASP.NET Core & SQL | Building backend applications, data workflows, and practical AI tooling.
-- Website: https://github.com/ssaka2/Ai-project-/tree/main/portfolio
-- Ai-project- repository description: Software engineering portfolio: 12 projects spanning .NET, SQL, Python, TypeScript, MCP, AI evaluation, and reliable backend systems.
-- Repository topics: csharp, dotnet, aspnet-core, sql-server, python, typescript, nodejs, sqlite, model-context-protocol, ai-evaluation, docker, portfolio
+- Bio: Software developer | C#, ASP.NET Core & SQL | Backend applications, data systems and practical AI tooling.
+- Website: https://github.com/ssaka2/Ai-project-
+- Repository description: 19 software engineering projects: .NET APIs, SQL, Python, TypeScript, Go, Rust, MCP, AI evaluation and cloud tooling.
+- Topics: csharp, dotnet, aspnet-core, sql-server, python, typescript, golang, rust, model-context-protocol, docker, portfolio
 
-Keep Ai-project- pinned. The twelve projects currently share this repository; individual folders cannot be pinned as separate repositories. Do not label them as twelve GitHub repositories.
+Pin **Ai-project-** on the profile. Project folders cannot be pinned independently; these are 19 projects in one repository.
 
-## Current themes
-
-Reviewed [GitHub Trending](https://github.com/trending) on September 21, 2026. Agent-development tooling is represented by projects such as [agent-native](https://github.com/BuilderIO/agent-native) and [ECC](https://github.com/affaan-m/ECC). This portfolio's MCP tools, evaluation lab, retrieval project, and model gateway show related engineering topics. The portfolio itself is not claimed to be trending.
-
-The profile lists technologies actually present in the code. It does not claim every technology, guaranteed defect-free software, live production use, or unmeasured business results.
+The README lists technologies present in the code and links to verification evidence. Keep counts and links aligned with the [catalog](../../portfolio/README.md). Do not describe local demos as live production services.

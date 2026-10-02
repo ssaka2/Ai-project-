@@ -1,41 +1,36 @@
+<div align="center">
+
 # Sai Sandeep Saka
 ### Software developer · .NET, data systems & AI tooling
 
-I build backend applications with C#, ASP.NET Core, and SQL, and explore Python and TypeScript through practical, tested projects.
+I build backend applications with C#, ASP.NET Core and SQL, with practical projects in Python, TypeScript, Go and Rust.
 
-[Explore my projects](https://github.com/ssaka2/Ai-project-/tree/main/portfolio) · [Build checks](https://github.com/ssaka2/Ai-project-/actions) · [Setup guide](https://github.com/ssaka2/Ai-project-/tree/main/docs/full-stack-setup.md)
+[Explore my portfolio](https://github.com/ssaka2/Ai-project-) · [Project guide](https://github.com/ssaka2/Ai-project-/blob/main/docs/project-guide.md) · [Try the Web Lab](https://sandeep-ai-engineering-lab.ssaka2.chatgpt.site)
 
-[![CareerDesk build](https://github.com/ssaka2/Ai-project-/actions/workflows/ci.yml/badge.svg)](https://github.com/ssaka2/Ai-project-/actions/workflows/ci.yml)
-[![Portfolio tests](https://github.com/ssaka2/Ai-project-/actions/workflows/portfolio.yml/badge.svg)](https://github.com/ssaka2/Ai-project-/actions/workflows/portfolio.yml)
+[![Build and test](https://github.com/ssaka2/Ai-project-/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/ssaka2/Ai-project-/actions/workflows/ci.yml)
+[![Portfolio tests](https://github.com/ssaka2/Ai-project-/actions/workflows/portfolio.yml/badge.svg?branch=main)](https://github.com/ssaka2/Ai-project-/actions/workflows/portfolio.yml)
 
-## Start here
+</div>
 
-| Project | What to explore | Technology |
-| --- | --- | --- |
-| [AI CareerDesk](https://github.com/ssaka2/Ai-project-) | Private job tracking, resume drafts, account isolation, and browser-tested workflows | C# · ASP.NET Core · EF Core · SQL Server |
-| [MCP Knowledge Tools](https://github.com/ssaka2/Ai-project-/tree/main/portfolio/mcp-knowledge-tools) | Read-only agent tools, document snapshots, source citations, and stdio integration | Python · MCP SDK |
-| [Ollama Request Gateway](https://github.com/ssaka2/Ai-project-/tree/main/portfolio/ollama-request-gateway) | Local model adapter with cancellation, deadlines, bounded concurrency, and circuit recovery | TypeScript · Node.js |
+## Featured work
 
-## More engineering work
-
-| Area | Projects |
+| Project | Engineering focus |
 | --- | --- |
-| Backend reliability | [Support Ticket API](https://github.com/ssaka2/Ai-project-/tree/main/portfolio/support-ticket-api) · [Durable Job Queue](https://github.com/ssaka2/Ai-project-/tree/main/portfolio/durable-job-queue) · [Signed Webhook Receiver](https://github.com/ssaka2/Ai-project-/tree/main/portfolio/signed-webhook-receiver) |
-| Data systems | [Inventory Ledger](https://github.com/ssaka2/Ai-project-/tree/main/portfolio/inventory-ledger) · [Airport Analytics](https://github.com/ssaka2/Ai-project-/tree/main/portfolio/airport-analytics) |
-| AI evaluation & retrieval | [Agent Evaluation Lab](https://github.com/ssaka2/Ai-project-/tree/main/portfolio/agent-evaluation-lab) · [Local Knowledge Search](https://github.com/ssaka2/Ai-project-/tree/main/portfolio/local-knowledge-search) |
-| Agent context & contracts | [Agent Memory Store](https://github.com/ssaka2/Ai-project-/tree/main/portfolio/agent-memory-store) · [AI Response Contract Lab](https://github.com/ssaka2/Ai-project-/tree/main/portfolio/ai-response-contract-lab) |
+| [AI CareerDesk](https://github.com/ssaka2/Ai-project-) | C# / ASP.NET Core / SQL Server: private job tracking, resume workflows and account isolation |
+| [Booking Web API](https://github.com/ssaka2/Ai-project-/tree/main/portfolio/booking-web-api) | REST service and browser UI with concurrent booking protection and restart persistence |
+| [MCP Knowledge Tools](https://github.com/ssaka2/Ai-project-/tree/main/portfolio/mcp-knowledge-tools) | Python agent tools with document snapshots, source citations and protocol verification |
+| [Cloud VPN API](https://github.com/ssaka2/Ai-project-/tree/main/portfolio/cloud-vpn-api) | Authenticated WireGuard management, Docker packaging and tunnel revocation tests |
+| [Trace Inspector](https://github.com/ssaka2/Ai-project-/tree/main/portfolio/otel-trace-inspector) | TypeScript analysis of OTLP/JSON traces, exact durations and trace relationships |
+| [Go Health Probe](https://github.com/ssaka2/Ai-project-/tree/main/portfolio/go-health-probe) | Concurrent health checks with cancellation, deadlines and race tests |
 
-## Technology in the code
+## How I work
 
-**Backend:** C#, .NET 10, ASP.NET Core, Entity Framework Core  
-**Data:** SQL Server, SQLite, SQL, CSV ingestion, FTS5 retrieval  
-**AI tooling:** MCP, recorded agent evaluation, Ollama API integration  
-**Delivery:** Python, TypeScript, Node.js 24, Docker, GitHub Actions, Playwright
+I make projects reviewable with runnable examples, automated checks, explicit design decisions and documented limitations. My portfolio explores transactions, idempotency, concurrency, retries, ownership boundaries and failure recovery.
 
-## How I make projects reviewable
+**Backend & data:** C#, .NET, ASP.NET Core, EF Core, SQL Server, Python, SQLite.  
+**AI & systems:** MCP, recorded-response evaluation, Ollama integration, TypeScript, Go, Rust.  
+**Delivery:** Docker, GitHub Actions, Playwright, HTTP integration tests.
 
-Each project includes setup instructions, automated checks, synthetic examples, and documented limitations. The collection covers account isolation, transactions, idempotency, concurrency, retries, source citations, and failure recovery.
+[Browse all 19 projects](https://github.com/ssaka2/Ai-project-/tree/main/portfolio) · [Read verification evidence](https://github.com/ssaka2/Ai-project-/blob/main/docs/vm-verification-2026-10-02.md)
 
-CareerDesk runs service, SQL Server, Chromium, Firefox, WebKit, and Docker checks. Portfolio CI covers Python 3.11–3.14, Node.js 24, and the .NET ticket API.
-
-These are portfolio demonstrations. Ollama CI uses a mock endpoint; live models and public cloud deployments require separate configuration and verification.
+The projects share one repository. The Web Lab is the public browser demo; other services require local or cloud setup. Model gateway tests use a mock endpoint, and production deployment requires separate configuration.
