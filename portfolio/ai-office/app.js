@@ -1,5 +1,9 @@
 'use strict';
 let state = {agents: [], tasks: [], events: []}, token = '';
+const PAGE_SIZE = 25;
+const limits = {queued:25, active:25, review:25, done:25};
+const drafts = new Map();
+let agentById = new Map(), workload = new Map();
 const $ = (id) => document.getElementById(id);
 function el(tag, text, cls) { const n = document.createElement(tag); if(text !== undefined) n.textContent = text; if(cls) n.className = cls; return n; }
 function report(text, error = false) { $('message').textContent = text; $('message').className = error ? 'error' : ''; }
@@ -8,12 +12,15 @@ async function request(path, data) {
   const body = await response.json(); if(!response.ok) throw new Error(body.error || 'Request failed'); return body;
 }
 async function load() { try {state = await request('/api/state'); token = state.token; render(); report('Workspace up to date.');} catch(e) {report(e.message, true);} }
-async function save(path, data) { state = await request(path, data); render(); report('Saved.'); }
+async function save(path, data) { state = await request(path, data); if(path === '/api/update') drafts.delete(data.id); render(); report('Saved.'); }
 function render() {
+  agentById = new Map(state.agents.map(a => [a.id, a]));
+  workload = new Map(state.agents.map(a => [a.id, 0]));
+  for(const task of state.tasks) if(task.status !== 'done') workload.set(task.agent, (workload.get(task.agent) || 0) + 1);
   const selected = $('agent-select').value; $('agent-select').replaceChildren(); $('agents').replaceChildren();
   for(const agent of state.agents) {
     const option = el('option', agent.name); option.value = agent.id; $('agent-select').append(option);
-    const card = el('div', undefined, 'agent'); card.append(el('strong', agent.name), el('p', agent.role));
+    const card = el('div', undefined, 'agent'); card.append(el('strong', agent.name), el('p', agent.role), el('p', `${workload.get(agent.id) || 0} open tasks`, 'eyebrow'));
     const edit = el('button', 'Edit', 'secondary'); edit.onclick = () => {const f = $('agent-form'); for(const k of ['id','name','role']) f.elements[k].value = agent[k]; f.elements.name.focus();}; card.append(edit); $('agents').append(card);
   }
   if(state.agents.some(a => String(a.id) === selected)) $('agent-select').value = selected;
@@ -26,25 +33,37 @@ function render() {
 }
 function renderBoard() {
   $('board').replaceChildren(); const query = $('search').value.toLowerCase();
+  const groups = {queued:[], active:[], review:[], done:[]};
+  for(const task of state.tasks) if(`${task.title} ${task.brief}`.toLowerCase().includes(query)) groups[task.status].push(task);
   const titles = {queued:'Queued',active:'In progress',review:'Review',done:'Done'};
   for(const status of Object.keys(titles)) {
-    const column=el('section',undefined,'column'); column.append(el('h3',titles[status]));
-    const tasks=state.tasks.filter(t=>t.status===status && `${t.title} ${t.brief}`.toLowerCase().includes(query));
+    const column=el('section',undefined,'column'); column.append(el('h3',`${titles[status]} (${groups[status].length})`));
+    const tasks=groups[status];
     if(!tasks.length) column.append(el('p','No tasks here.','empty'));
-    for(const task of tasks) {
-      const card=el('article',undefined,'task'); card.append(el('span',`#${task.id} · ${state.agents.find(a=>a.id===task.agent)?.name || 'Unassigned'}`,'eyebrow'),el('h4',task.title),el('p',task.brief));
+    for(const task of tasks.slice(0, limits[status])) {
+      const card=el('article',undefined,'task'); card.append(el('span',`#${task.id} · ${agentById.get(task.agent)?.name || 'Unassigned'}`,'eyebrow'),el('h4',task.title),el('p',task.brief));
       if(task.due) card.append(el('p',`Scheduled: ${new Date(task.due).toLocaleString()}`,'schedule'));
-      const label=el('label','Result / working notes'); const notes=el('textarea'); notes.value=task.result; notes.maxLength=20000; label.append(notes); card.append(label);
+      const label=el('label','Result / working notes'); const notes=el('textarea'); notes.value=drafts.get(task.id)?.result ?? task.result; notes.maxLength=20000; label.append(notes); card.append(label);
+      const assignment = el('label','Assign staff'); const staff = el('select');
+      for(const agent of state.agents) {const option=el('option', `${agent.name} (${workload.get(agent.id) || 0} open)`); option.value=agent.id; staff.append(option);}
+      staff.value=String(drafts.get(task.id)?.agent ?? task.agent); assignment.append(staff); card.append(assignment);
+      function keepDraft() {drafts.set(task.id, {result:notes.value, agent:Number(staff.value), version:drafts.get(task.id)?.version ?? task.version});}
+      notes.oninput=keepDraft; staff.onchange=keepDraft;
       const actions=el('div',undefined,'actions');
-      for(const [text,next] of [['Save notes',status], ...({queued:[['Start','active']],active:[['Request review','review']],review:[['Revise','active'],['Approve & complete','done']],done:[['Reopen','queued']]}[status])]) {
+      for(const [text,next] of [['Save changes',status], ...({queued:[['Start','active']],active:[['Request review','review']],review:[['Revise','active'],['Approve & complete','done']],done:[['Reopen','queued']]}[status])]) {
         const button=el('button',text,'secondary'); if(status==='queued' && next==='active' && task.due && new Date(task.due)>new Date()) {button.disabled=true;button.title='Available at scheduled start; refresh then';}
-        button.onclick=async()=>{button.disabled=true;try{await save('/api/update',{id:task.id,version:task.version,status:next,result:notes.value});}catch(e){report(e.message,true);button.disabled=false;}}; actions.append(button);
+        button.onclick=async()=>{button.disabled=true;try{await save('/api/update',{id:task.id,version:drafts.get(task.id)?.version ?? task.version,status:next,result:notes.value,agent:Number(staff.value)});}catch(e){report(e.message,true);button.disabled=false;}}; actions.append(button);
+      }
+      if(drafts.has(task.id)) {
+        const discard=el('button','Discard local edits','secondary'); discard.onclick=()=>{drafts.delete(task.id);renderBoard();}; actions.append(discard);
+        if(drafts.get(task.id).version !== task.version) card.append(el('p','This task changed elsewhere. Copy your notes before discarding local edits and refreshing.', 'error'));
       }
       card.append(actions); column.append(card);
     }
+    if(tasks.length > limits[status]) {const more=el('button',`Show more ${titles[status].toLowerCase()}`, 'secondary'); more.onclick=()=>{limits[status]+=PAGE_SIZE;renderBoard();}; column.append(more);}
     $('board').append(column);
   }
 }
 $('task-form').onsubmit=async(e)=>{e.preventDefault(); const f=e.target; const b=f.querySelector('button'); b.disabled=true;try{await save('/api/tasks',{title:f.elements.title.value,brief:f.elements.brief.value,agent:Number(f.elements.agent.value),due:f.elements.due.value ? new Date(f.elements.due.value).toISOString() : null});f.reset();}catch(err){report(err.message,true);}finally{b.disabled=false;}};
 $('agent-form').onsubmit=async(e)=>{e.preventDefault();const f=e.target; const b=f.querySelector('button');b.disabled=true;try{await save('/api/agents',{id:f.elements.id.value ? Number(f.elements.id.value):null,name:f.elements.name.value,role:f.elements.role.value});f.reset();}catch(err){report(err.message,true);}finally{b.disabled=false;}};
-$('refresh').onclick=load; $('search').oninput=renderBoard; load();
+$('refresh').onclick=load; let searchTimer; $('search').oninput=()=>{clearTimeout(searchTimer);searchTimer=setTimeout(()=>{for(const key of Object.keys(limits)) limits[key]=PAGE_SIZE;renderBoard();},150);}; load();

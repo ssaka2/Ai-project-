@@ -3,7 +3,8 @@ import tempfile
 import threading
 from pathlib import Path
 from playwright.sync_api import sync_playwright, expect
-from office import make_server
+from office import make_server, Office, utcnow
+from contextlib import closing
 
 
 def main():
@@ -19,6 +20,7 @@ def main():
                 page.on('pageerror', lambda error: errors.append(str(error)))
                 page.goto(f'http://127.0.0.1:{server.server_port}')
                 expect(page.get_by_role('status')).to_have_text('Workspace up to date.')
+                expect(page.locator('#agents .agent')).to_have_count(12)
                 agents = page.locator('#agent-form')
                 agents.get_by_label('Name', exact=True).fill('Evidence editor')
                 agents.get_by_label('Role / instructions').fill('Check every source.')
@@ -33,6 +35,13 @@ def main():
                 card.get_by_role('button', name='Start', exact=True).click()
                 expect(card.get_by_role('button', name='Request review')).to_be_visible()
                 card.get_by_label('Result / working notes').fill('Claims checked; no live AI provider configured.')
+                page.get_by_label('Search tasks').fill('hide everything')
+                expect(page.locator('article.task')).to_have_count(0)
+                page.get_by_label('Search tasks').fill('launch')
+                expect(card.get_by_label('Result / working notes')).to_have_value('Claims checked; no live AI provider configured.')
+                card.get_by_label('Assign staff').select_option(label='QA Engineer (0 open)')
+                card.get_by_role('button', name='Save changes').click()
+                expect(card.locator('.eyebrow')).to_contain_text('QA Engineer')
                 card.get_by_role('button', name='Request review').click()
                 card.get_by_role('button', name='Approve & complete').click()
                 expect(card.get_by_role('button', name='Reopen')).to_be_visible()
@@ -45,6 +54,18 @@ def main():
                 page.set_viewport_size({'width': 390, 'height': 844})
                 expect(card).to_be_visible()
                 assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth'), 'Mobile overflow'
+                # Exercise bounded rendering with real stored tasks.
+                office = Office(Path(folder) / 'browser.sqlite3')
+                with closing(office.connect()) as db, db:
+                    db.executemany('INSERT INTO tasks(title,brief,agent,created) VALUES (?,?,?,?)',
+                                   [(f'Batch task {i}', 'Scale verification', 1, utcnow()) for i in range(80)])
+                page.get_by_label('Search tasks').fill('')
+                page.get_by_role('button', name='Refresh', exact=True).click()
+                expect(page.locator('article.task')).to_have_count(26)
+                page.get_by_role('button', name='Show more queued').click()
+                expect(page.locator('article.task')).to_have_count(51)
+                page.get_by_label('Search tasks').fill('Batch task 0')
+                expect(page.locator('article.task')).to_have_count(1)
                 assert not errors, errors
                 browser.close()
                 print('Chromium: agent creation, task lifecycle, reload persistence, search, mobile layout passed.')

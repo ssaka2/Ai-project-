@@ -22,7 +22,10 @@ Agents are **roles for manual planning**, not autonomous AI processes. You perfo
 
 ## Included
 
-- Responsive queued / active / review / done board and title/brief search.
+- Responsive queued / active / review / done board and debounced title/brief search. Initially renders at most 25 cards per column; Show more reveals the next 25. Search covers all loaded tasks, including hidden cards.
+- Twelve default staff roles: Research, Builder, Reviewer, Planner, Frontend Engineer, Backend Engineer, QA Engineer, Security Reviewer, Data Analyst, DevOps Engineer, Technical Writer, and Support Specialist.
+- Per-staff open task counts and reassignment with version checks and recorded history. Existing databases gain specialist roles once; custom roles and renamed staff are preserved.
+- SQLite WAL mode allows reads alongside writes. The UI groups tasks once and uses indexed in-memory staff lookup.
 - Editable agents, instructions, task notes, and human review transitions.
 - SQLite persistence and atomic event history; recent 200 events displayed/exported.
 - Conflict detection so stale sessions cannot overwrite newer task edits.
@@ -38,7 +41,7 @@ python -m unittest discover -s portfolio/ai-office -v
 node --check portfolio/ai-office/app.js
 ```
 
-Ten automated service/HTTP tests cover the review lifecycle, persistence after reopening the database, competing edits, timezone normalization, scheduled starts, agent changes, validation, exports, cross-origin rejection, and static assets.
+Twelve automated service/HTTP tests cover the review lifecycle, persistence after reopening the database, competing edits, timezone normalization, scheduled starts, agent changes, validation, exports, cross-origin rejection, and static assets.
 
 Optional real browser verification:
 
@@ -48,7 +51,7 @@ python -m playwright install chromium
 python portfolio/ai-office/verify_browser.py
 ```
 
-GitHub Actions runs service tests on the portfolio Python matrix and the browser workflow on Chromium. The browser test checks agent creation, the full task lifecycle, reload persistence, search, and mobile overflow.
+GitHub Actions runs service tests on the portfolio Python matrix and the browser workflow on Chromium. The browser test checks agent creation, the full task lifecycle, reload persistence, search, and mobile overflow, staff reassignment, draft preservation, and bounded rendering of a board with 80 additional tasks. No latency benchmark or speedup percentage is claimed.
 
 ## API
 
@@ -58,10 +61,10 @@ GitHub Actions runs service tests on the portfolio Python matrix and the browser
 | GET | `/api/export` | JSON snapshot without the token |
 | POST | `/api/agents` | Create role; include `id` to edit |
 | POST | `/api/tasks` | Create `title`, `brief`, integer `agent`, optional ISO `due` with timezone |
-| POST | `/api/update` | Update task using integer `id`, current `version`, `status`, and optional `result` |
+| POST | `/api/update` | Update task using integer `id`, current `version`, `status`, optional `result`, and optional integer `agent` |
 
 POST requests require JSON and the `X-Office-Token` from `/api/state`. Stale versions return 409; invalid input returns 400. A result is required for review/completion, and queued tasks cannot skip straight to done. Approval is a workflow step for one local user, not independent reviewer authentication.
 
 ## Limits
 
-Designed for one trusted local user. No accounts, TLS, public hosting, auto-refresh, task deletion, recurring schedules, model integration, or independent approver identity. Do not expose the server publicly or tunnel it to the internet. Browser refresh and search rebuild the board: save notes first. Agent edits use last-write-wins; task results use version checks. The standard-library HTTP server is for local development, not production hosting.
+Designed for one trusted local user. No accounts, TLS, public hosting, auto-refresh, task deletion, recurring schedules, model integration, or independent approver identity. Do not expose the server publicly or tunnel it to the internet. Search, board refresh, pagination, and unrelated saves preserve pending notes and assignments in memory. Reloading/closing the browser loses unsaved edits. Stale drafts retain their original version and cannot overwrite a newer task; copy their contents before using Discard local edits. The API still transfers a full task snapshot, so this is not a server-paginated solution for very large datasets. Agent edits use last-write-wins; task results use version checks. The standard-library HTTP server is for local development, not production hosting.

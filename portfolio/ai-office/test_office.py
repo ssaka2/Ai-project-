@@ -71,6 +71,34 @@ class OfficeTests(unittest.TestCase):
         self.office.mutate('agents', {**agent, 'name':'Editor'})
         self.assertEqual(app.Office(self.path).snapshot()['agents'][-1]['name'], 'Editor')
 
+    def test_specialist_migration_preserves_custom_staff(self):
+        path = Path(self.tmp.name) / 'legacy.sqlite3'
+        import sqlite3
+        with sqlite3.connect(path) as db:
+            db.execute('CREATE TABLE agents(id INTEGER PRIMARY KEY,name TEXT NOT NULL,role TEXT NOT NULL)')
+            db.execute("INSERT INTO agents VALUES (1,'My researcher','Keep this custom role')")
+            db.execute("INSERT INTO agents VALUES (2,'Planner','My own planning instructions')")
+        office = app.Office(path)
+        agents = office.snapshot()['agents']
+        self.assertEqual(agents[0]['role'], 'Keep this custom role')
+        self.assertEqual(agents[1]['role'], 'My own planning instructions')
+        self.assertEqual(len(agents), 10)
+        office.mutate('agents', {'id': agents[-1]['id'], 'name':'Custom support', 'role':'Keep edits'})
+        reopened = app.Office(path).snapshot()['agents']
+        self.assertEqual(len(reopened), 10)
+        self.assertEqual(reopened[-1]['name'], 'Custom support')
+        self.assertEqual(len(self.office.snapshot()['agents']), 12)
+
+    def test_reassignment_validation_history_and_conflict(self):
+        agent = self.office.snapshot()['agents'][-1]['id']
+        task = self.update(agent=agent)
+        self.assertEqual(task['agent'], agent)
+        self.assertIn('reassigned', self.office.snapshot()['events'][0]['message'])
+        with self.assertRaises(app.Conflict):
+            self.office.mutate('update', {'id':task['id'],'version':1,'agent':1})
+        with self.assertRaises(ValueError): self.update(agent=99999)
+        self.assertEqual(app.Office(self.path).snapshot()['tasks'][0]['agent'], agent)
+
     def test_input_limits(self):
         for title in ['', ' ', 'x'*201, 3, None]:
             with self.assertRaises(ValueError): self.office.mutate('tasks', {'title':title,'brief':'x','agent':1})

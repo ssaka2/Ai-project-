@@ -11,6 +11,17 @@ from urllib.parse import urlsplit
 
 ROOT = Path(__file__).resolve().parent
 STATUSES = ('queued', 'active', 'review', 'done')
+SPECIALISTS = (
+    ('Planner', 'Break briefs into scoped tasks and acceptance criteria'),
+    ('Frontend Engineer', 'Build accessible interfaces and responsive layouts'),
+    ('Backend Engineer', 'Design APIs, validation, and service boundaries'),
+    ('QA Engineer', 'Test edge cases and document reproducible failures'),
+    ('Security Reviewer', 'Review trust boundaries and sensitive data handling'),
+    ('Data Analyst', 'Check data quality and explain analysis assumptions'),
+    ('DevOps Engineer', 'Prepare reproducible builds and deployment checks'),
+    ('Technical Writer', 'Write setup guides and document known limitations'),
+    ('Support Specialist', 'Triage requests and capture clear reproduction steps'),
+)
 
 
 def utcnow():
@@ -42,7 +53,9 @@ class Office:
     def __init__(self, path):
         self.path = str(path)
         with closing(self.connect()) as db, db:
+            db.execute('PRAGMA journal_mode=WAL')
             db.executescript('''
+                CREATE TABLE IF NOT EXISTS migrations(name TEXT PRIMARY KEY);
                 CREATE TABLE IF NOT EXISTS agents(
                     id INTEGER PRIMARY KEY, name TEXT NOT NULL, role TEXT NOT NULL);
                 CREATE TABLE IF NOT EXISTS tasks(
@@ -59,6 +72,13 @@ class Office:
                     ('Research', 'Gather evidence and record sources'),
                     ('Builder', 'Implement and document the requested change'),
                     ('Reviewer', 'Verify results and record limitations')])
+            # One migration per database; never overwrite renamed/custom staff.
+            db.execute('INSERT OR IGNORE INTO migrations(name) VALUES (?)', ('specialist-roster-v1',))
+            if db.execute('SELECT changes()').fetchone()[0]:
+                for name, role in SPECIALISTS:
+                    if not db.execute('SELECT 1 FROM agents WHERE name=?', (name,)).fetchone():
+                        db.execute('INSERT INTO agents(name,role) VALUES (?,?)', (name, role))
+
 
     def connect(self):
         db = sqlite3.connect(self.path, timeout=10)
@@ -109,6 +129,9 @@ class Office:
                     raise ValueError('Unknown task')
                 if row['version'] != version:
                     raise Conflict('Task changed in another session. Refresh and try again.')
+                agent = data.get('agent', row['agent'])
+                if type(agent) is not int or not db.execute('SELECT 1 FROM agents WHERE id=?', (agent,)).fetchone():
+                    raise ValueError('Choose an existing agent')
                 status = data.get('status', row['status'])
                 allowed = {'queued': ('queued', 'active'), 'active': ('active', 'review'),
                            'review': ('review', 'active', 'done'), 'done': ('done', 'queued')}
@@ -121,8 +144,10 @@ class Office:
                     raise ValueError('Add a result before requesting review or completing a task')
                 if row['status'] == 'queued' and status == 'active' and row['due'] and row['due'] > utcnow():
                     raise ValueError('This scheduled task is not due yet')
-                db.execute('UPDATE tasks SET status=?,result=?,version=version+1 WHERE id=?', (status, result, task))
+                db.execute('UPDATE tasks SET status=?,result=?,agent=?,version=version+1 WHERE id=?', (status, result, agent, task))
                 message = f"{row['status']} → {status}" if status != row['status'] else 'Result updated'
+                if agent != row['agent']:
+                    message += f"; reassigned from agent #{row['agent']} to #{agent}"
             else:
                 raise ValueError('Unknown operation')
             db.execute('INSERT INTO events(task,message,created) VALUES (?,?,?)', (task, message, utcnow()))
