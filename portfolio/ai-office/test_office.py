@@ -104,6 +104,7 @@ class OfficeTests(unittest.TestCase):
         self.assertEqual(len(state['agents']), 20)
         tasks = sorted([t for t in state['tasks'] if t['project']], key=lambda t:t['id'])
         self.assertEqual(len(tasks), 9)
+        self.assertEqual(tasks[6]['agent'], tasks[7]['agent'])
         self.assertEqual(len(state['dependencies']), 9)
         with self.assertRaises(ValueError):
             self.office.mutate('update', {'id':tasks[1]['id'], 'version':1, 'status':'active'})
@@ -131,6 +132,25 @@ class OfficeTests(unittest.TestCase):
         self.assertEqual(len(state['agents']), 20)
         self.assertEqual(len(state['projects']), 2)
         self.assertEqual(len(state['tasks']), 19)
+
+    def test_status_owner_upgrade_preserves_existing_work(self):
+        from contextlib import closing
+        state = self.office.mutate('job-project', {'name':'Legacy opening'})
+        tasks = sorted([t for t in state['tasks'] if t['project']], key=lambda t:t['id'])
+        followup = next(a for a in state['agents'] if a['name']=='Follow-up Team')['id']
+        with closing(self.office.connect()) as db, db:
+            db.execute("DELETE FROM migrations WHERE name='submission-status-owner-v1'")
+            db.execute('UPDATE tasks SET agent=?,result=? WHERE id=?', (followup, 'Keep my notes', tasks[7]['id']))
+        updated = app.Office(self.path).snapshot()
+        status_task = next(t for t in updated['tasks'] if t['id']==tasks[7]['id'])
+        self.assertEqual(status_task['agent'], tasks[6]['agent'])
+        self.assertEqual(status_task['result'], 'Keep my notes')
+        self.assertEqual(status_task['version'], 2)
+        self.assertIn('next check date', status_task['brief'])
+        again = app.Office(self.path).snapshot()
+        self.assertEqual(next(t for t in again['tasks'] if t['id']==status_task['id'])['version'], 2)
+        with self.assertRaises(app.Conflict):
+            self.office.mutate('update', {'id':status_task['id'], 'version':1, 'agent':followup})
 
     def test_input_limits(self):
         for title in ['', ' ', 'x'*201, 3, None]:

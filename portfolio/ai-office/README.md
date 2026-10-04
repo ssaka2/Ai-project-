@@ -41,7 +41,7 @@ python -m unittest discover -s portfolio/ai-office -v
 node --check portfolio/ai-office/app.js
 ```
 
-Fifteen automated service/HTTP tests cover the review lifecycle, persistence after reopening the database, competing edits, timezone normalization, scheduled starts, agent changes, validation, exports, cross-origin rejection, and static assets.
+Sixteen automated service/HTTP tests cover the review lifecycle, persistence after reopening the database, competing edits, timezone normalization, scheduled starts, agent changes, validation, exports, cross-origin rejection, and static assets.
 
 Optional real browser verification:
 
@@ -66,8 +66,10 @@ Use **Create application workflow** and give each opening a unique project name 
 | Cover Letter | Fact-based letter draft | Eligibility |
 | Application QA | Reviewed package and recorded applicant approval | CV and letter |
 | Submission | Actual submission receipt or an unresolved blocker | QA |
-| Follow-up | Response or next follow-up plan | Submission |
+| Submission (same team) | Verified application status, evidence source, time checked, and next check date | Submission |
 | Applications Manager | Final application report | Follow-up |
+
+One Submission Team owns both applying and status checking. The Follow-up Team remains available for separately assigned outreach tasks. On upgrade, queued status tasks still assigned to the default Follow-up Team move to their application’s submission owner; existing notes are retained. In-progress, completed, and custom-assigned status tasks are preserved and can be reassigned manually.
 
 The server enforces these prerequisites. Reopening an input is blocked if dependent work has already started; reopen dependent tasks in reverse order first. Duplicate project names are rejected case-insensitively. Task completion, reassignment, notes, and project history survive restart.
 

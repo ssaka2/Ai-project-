@@ -30,7 +30,7 @@ JOB_TEAMS = (
     ('CV Tailoring Team', 'Tailor the CV using verified applicant facts; never invent experience or qualifications.'),
     ('Cover Letter Team', 'Draft a role-specific cover letter grounded in verified applicant facts.'),
     ('Application QA Team', 'Check the job, CV, letter, missing answers, and applicant approval.'),
-    ('Submission Team', 'Submit only after applicant approval; record an actual receipt or explain the blocker.'),
+    ('Submission Team', 'Submit only after applicant approval, retain the receipt, check the application status, and record the next check date or blocker.'),
     ('Follow-up Team', 'Track responses and plan follow-ups without sending unsolicited messages.'),
 )
 # Index dependencies produce one explicit, auditable handoff graph.
@@ -42,7 +42,7 @@ JOB_STAGES = (
     (4, 'Prepare the cover letter', 'Draft a role-specific letter from verified facts. Record the draft or its location. Do not send it.', (2,)),
     (5, 'Review application and obtain approval', 'Check the exact CV, letter, destination, and application answers. Resolve missing data and record applicant approval for this application before handoff.', (3,4)),
     (6, 'Submit and record the outcome', 'Use an approved portal or permitted integration. This workspace cannot submit externally. Record the real confirmation/reference and submission date, or leave this task open with the blocker. Never claim a submission without evidence.', (5,)),
-    (7, 'Track response and follow-up', 'Record the response or the next follow-up date and planned action. Sending a message is a separate action requiring authorization.', (6,)),
+    (6, 'Track response and follow-up', 'Check the actual portal or confirmation email manually. Record the application status, evidence source, time checked, and next check date. If access is unavailable, record Unknown and the blocker. Never infer that an application was submitted or accepted. Sending a follow-up message is a separate action requiring authorization.', (6,)),
     (0, 'Review the application report', 'Review the submitted application evidence, response, and next action. Record unresolved issues and close this application workflow.', (7,)),
 )
 
@@ -111,6 +111,28 @@ class Office:
                 for name, role in SPECIALISTS:
                     if not db.execute('SELECT 1 FROM agents WHERE name=?', (name,)).fetchone():
                         db.execute('INSERT INTO agents(name,role) VALUES (?,?)', (name, role))
+
+
+            db.execute('INSERT OR IGNORE INTO migrations(name) VALUES (?)', ('submission-status-owner-v1',))
+            if db.execute('SELECT changes()').fetchone()[0]:
+                db.execute('UPDATE agents SET role=? WHERE name=? AND role=?',
+                           (JOB_TEAMS[6][1], 'Submission Team', 'Submit only after applicant approval; record an actual receipt or explain the blocker.'))
+                pending = db.execute("""SELECT t.id, s.agent FROM tasks t
+                    JOIN projects p ON p.id=t.project
+                    JOIN agents a ON a.id=t.agent
+                    JOIN tasks s ON s.project=t.project AND s.title='Submit and record the outcome'
+                    WHERE p.kind='job-application' AND t.title='Track response and follow-up'
+                    AND t.status='queued' AND a.name='Follow-up Team'
+                    ORDER BY t.id, s.id""").fetchall()
+                migrated = set()
+                for task in pending:
+                    if task['id'] in migrated:
+                        continue
+                    migrated.add(task['id'])
+                    db.execute('UPDATE tasks SET agent=?,brief=?,version=version+1 WHERE id=?',
+                               (task['agent'], JOB_STAGES[7][2], task['id']))
+                    db.execute('INSERT INTO events(task,message,created) VALUES (?,?,?)',
+                               (task['id'], 'Status checking assigned to the same team as submission', utcnow()))
 
 
     def connect(self):
