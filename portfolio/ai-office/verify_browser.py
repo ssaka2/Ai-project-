@@ -76,6 +76,7 @@ def main():
                 expect(discovery.get_by_role('button', name='Start', exact=True)).to_be_disabled()
                 planning = page.locator('article.task').filter(has=page.get_by_role('heading', name='Set application preferences', exact=True))
                 planning.get_by_role('button', name='Start', exact=True).click()
+                expect(planning.get_by_role('button', name='Request review')).to_be_visible()
                 planning.get_by_label('Result / working notes').fill('Synthetic profile verified for test purposes only.')
                 planning.get_by_role('button', name='Request review').click()
                 planning.get_by_role('button', name='Approve & complete').click()

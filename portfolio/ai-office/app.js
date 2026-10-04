@@ -13,7 +13,15 @@ async function request(path, data) {
   const body = await response.json(); if(!response.ok) throw new Error(body.error || 'Request failed'); return body;
 }
 async function load() { try {state = await request('/api/state'); token = state.token; render(); report('Workspace up to date.');} catch(e) {report(e.message, true);} }
-async function save(path, data) { state = await request(path, data); if(path === '/api/update') drafts.delete(data.id); render(); report('Saved.'); }
+let saving = false;
+async function save(path, data) {
+  if(saving) throw new Error('A save is in progress. Please wait.');
+  saving = true;
+  const controls = [...document.querySelectorAll('#board input, #board textarea, #board select, #board button')].map(node=>[node,node.disabled]);
+  for(const [node] of controls) node.disabled=true;
+  try {state = await request(path, data); if(path === '/api/update') drafts.delete(data.id); render(); report('Saved.');}
+  finally {saving=false; for(const [node,disabled] of controls) if(node.isConnected) node.disabled=disabled;}
+}
 function render() {
   taskById = new Map(state.tasks.map(t => [t.id, t]));
   prerequisites = new Map();
