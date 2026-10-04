@@ -114,6 +114,8 @@ class OfficeTests(unittest.TestCase):
         self.assertTrue(all(t['status']=='done' for t in snapshot['tasks'] if t['project']))
         with self.assertRaises(ValueError):
             self.office.mutate('update', {'id':tasks[0]['id'], 'version':4, 'status':'queued'})
+        with self.assertRaises(ValueError):
+            self.office.mutate('update', {'id':tasks[0]['id'], 'version':4, 'result':'Changed after downstream approval'})
         # Rework must move backwards through the dependency chain.
         for task in reversed(tasks):
             self.office.mutate('update', {'id':task['id'], 'version':4, 'status':'queued'})

@@ -193,10 +193,6 @@ class Office:
                     waiting = db.execute('SELECT t.id FROM dependencies d JOIN tasks t ON t.id=d.prerequisite WHERE d.task=? AND t.status!=?', (task, 'done')).fetchall()
                     if waiting:
                         raise ValueError('Complete prerequisite tasks first: ' + ', '.join(str(t['id']) for t in waiting))
-                if row['status'] == 'done' and status == 'queued':
-                    started = db.execute('SELECT t.id FROM dependencies d JOIN tasks t ON t.id=d.task WHERE d.prerequisite=? AND t.status!=?', (task, 'queued')).fetchall()
-                    if started:
-                        raise ValueError('Reopen dependent tasks in reverse order before changing their input')
                 if status not in allowed[row['status']]:
                     raise ValueError('Invalid task transition')
                 result = data.get('result', row['result'])
@@ -206,6 +202,10 @@ class Office:
                     raise ValueError('Add a result before requesting review or completing a task')
                 if row['status'] == 'queued' and status == 'active' and row['due'] and row['due'] > utcnow():
                     raise ValueError('This scheduled task is not due yet')
+                if row['status'] == 'done' and (status != 'done' or result != row['result'] or agent != row['agent']):
+                    started = db.execute('SELECT t.id FROM dependencies d JOIN tasks t ON t.id=d.task WHERE d.prerequisite=? AND t.status!=?', (task, 'queued')).fetchall()
+                    if started:
+                        raise ValueError('Reopen dependent tasks in reverse order before changing their input')
                 db.execute('UPDATE tasks SET status=?,result=?,agent=?,version=version+1 WHERE id=?', (status, result, agent, task))
                 message = f"{row['status']} → {status}" if status != row['status'] else 'Result updated'
                 if agent != row['agent']:
