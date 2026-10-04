@@ -42,6 +42,13 @@ C# and ASP.NET Core applications, dependable services, and tools that make AI wo
 
 **Technology:** C# / .NET 10 · SQL Server · Python · SQLite · TypeScript / Node.js 24 · Go · Rust · Docker · GitHub Actions · Playwright.
 
+## External projects to explore
+
+- **[Agents Office](https://github.com/ajsahni/agents-office)** — an independent project by AJ Sahni / Sahni.ai. Follow the upstream README for installation and usage.
+- **[Agents Office license](https://github.com/ajsahni/agents-office/blob/main/LICENSE)** — PolyForm Noncommercial 1.0.0 with Sahni.ai additional terms.
+
+This is an external reference, not an original portfolio project or an included dependency. Agents Office is not bundled, integrated, deployed, or tested by this repository. Its additional terms restrict rebranding and bundling with another product or system.
+
 ## Evidence you can inspect
 
 - [Application CI](.github/workflows/ci.yml) builds CareerDesk, audits dependencies, runs SQL and browser tests, and verifies Docker restart.
