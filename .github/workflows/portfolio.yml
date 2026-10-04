@@ -246,3 +246,24 @@ jobs:
           name: otel-trace-report
           path: portfolio/otel-trace-inspector/report.json
           if-no-files-found: error
+
+  ai-office-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Validate browser script
+        run: node --check portfolio/ai-office/app.js
+      - name: Install browser test dependencies
+        run: |
+          python -m pip install -r portfolio/booking-web-api/requirements-browser.txt
+          python -m playwright install --with-deps chromium
+      - name: Verify AI Office browser workflows
+        run: python portfolio/ai-office/verify_browser.py

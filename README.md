@@ -5,7 +5,7 @@
 
 C# and ASP.NET Core applications, dependable services, and tools that make AI workflows easier to inspect.
 
-[Explore 19 projects](portfolio/README.md) · [Try the Web Lab](https://sandeep-ai-engineering-lab.ssaka2.chatgpt.site) · [Run CareerDesk](#start-the-full-stack) · [Verification report](docs/vm-verification-2026-10-02.md)
+[Explore 20 projects](portfolio/README.md) · [Try the Web Lab](https://sandeep-ai-engineering-lab.ssaka2.chatgpt.site) · [Run CareerDesk](#start-the-full-stack) · [Verification report](docs/vm-verification-2026-10-02.md)
 
 [![CareerDesk build](https://github.com/ssaka2/Ai-project-/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/ssaka2/Ai-project-/actions/workflows/ci.yml)
 [![Portfolio tests](https://github.com/ssaka2/Ai-project-/actions/workflows/portfolio.yml/badge.svg?branch=main)](https://github.com/ssaka2/Ai-project-/actions/workflows/portfolio.yml)
@@ -36,11 +36,15 @@ C# and ASP.NET Core applications, dependable services, and tools that make AI wo
 | Finding every project or a ready-built package | [Complete catalog](portfolio/README.md) · [Build downloads](portfolio/README.md#download-built-projects) |
 | Running on a development VM | [Setup and commands](docs/portfolio-vm.md) · [Recorded verification](docs/vm-verification-2026-10-02.md) |
 
-**19 projects, one repository.** CareerDesk is the root application; 18 independent projects live in `portfolio/`. The Web Lab is a public browser demo. Other applications run locally or on a configured development VM.
+**20 projects, one repository.** CareerDesk is the root application; 19 independent projects live in `portfolio/`. The Web Lab is a public browser demo. Other applications run locally or on a configured development VM.
 
 **Engineering focus:** ownership boundaries · transactions · idempotency · concurrency · recovery · observable behavior.
 
 **Technology:** C# / .NET 10 · SQL Server · Python · SQLite · TypeScript / Node.js 24 · Go · Rust · Docker · GitHub Actions · Playwright.
+
+## New: AI Office
+
+[Open the AI Office project](portfolio/ai-office/) for a local task board with customizable agent roles, scheduled starts, review history, and SQLite persistence. This original project is a manual planning workspace; it does not execute AI agents. Run `python portfolio/ai-office/office.py` and open `http://127.0.0.1:4521`.
 
 ## External projects to explore
 
