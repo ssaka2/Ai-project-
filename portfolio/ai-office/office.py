@@ -23,6 +23,29 @@ SPECIALISTS = (
     ('Support Specialist', 'Triage requests and capture clear reproduction steps'),
 )
 
+JOB_TEAMS = (
+    ('Applications Manager', 'Define target roles, coordinate handoffs, and review campaign progress.'),
+    ('Job Discovery Team', 'Record a current job URL and description from permitted sources; check duplicates.'),
+    ('Eligibility Team', 'Check location, work authorization, sponsorship, requirements, and applicant preferences.'),
+    ('CV Tailoring Team', 'Tailor the CV using verified applicant facts; never invent experience or qualifications.'),
+    ('Cover Letter Team', 'Draft a role-specific cover letter grounded in verified applicant facts.'),
+    ('Application QA Team', 'Check the job, CV, letter, missing answers, and applicant approval.'),
+    ('Submission Team', 'Submit only after applicant approval; record an actual receipt or explain the blocker.'),
+    ('Follow-up Team', 'Track responses and plan follow-ups without sending unsolicited messages.'),
+)
+# Index dependencies produce one explicit, auditable handoff graph.
+JOB_STAGES = (
+    (0, 'Set application preferences', 'Record target roles, locations, work authorization/sponsorship needs, and the verified master CV. Ask for missing facts.', ()),
+    (1, 'Discover and verify an opening', 'Record one software job URL, company, role, job description, and closing date if known. Check that it is current and not already tracked. Use permitted sources only.', (0,)),
+    (2, 'Check eligibility and job fit', 'Compare the opening with the applicant preferences and CV. Record verified matches, gaps, and unanswered questions. Do not assume work authorization or qualifications.', (1,)),
+    (3, 'Prepare the tailored CV', 'Use only verified master-CV facts. Record the tailored document location and the changes made. Preserve dates, employers, credentials, and factual accuracy.', (2,)),
+    (4, 'Prepare the cover letter', 'Draft a role-specific letter from verified facts. Record the draft or its location. Do not send it.', (2,)),
+    (5, 'Review application and obtain approval', 'Check the exact CV, letter, destination, and application answers. Resolve missing data and record applicant approval for this application before handoff.', (3,4)),
+    (6, 'Submit and record the outcome', 'Use an approved portal or permitted integration. This workspace cannot submit externally. Record the real confirmation/reference and submission date, or leave this task open with the blocker. Never claim a submission without evidence.', (5,)),
+    (7, 'Track response and follow-up', 'Record the response or the next follow-up date and planned action. Sending a message is a separate action requiring authorization.', (6,)),
+    (0, 'Review the application report', 'Review the submitted application evidence, response, and next action. Record unresolved issues and close this application workflow.', (7,)),
+)
+
 
 def utcnow():
     return datetime.now(timezone.utc).isoformat()
@@ -56,6 +79,9 @@ class Office:
             db.execute('PRAGMA journal_mode=WAL')
             db.executescript('''
                 CREATE TABLE IF NOT EXISTS migrations(name TEXT PRIMARY KEY);
+                CREATE TABLE IF NOT EXISTS projects(
+                    id INTEGER PRIMARY KEY, name TEXT NOT NULL UNIQUE COLLATE NOCASE,
+                    kind TEXT NOT NULL, created TEXT NOT NULL);
                 CREATE TABLE IF NOT EXISTS agents(
                     id INTEGER PRIMARY KEY, name TEXT NOT NULL, role TEXT NOT NULL);
                 CREATE TABLE IF NOT EXISTS tasks(
@@ -63,10 +89,17 @@ class Office:
                     agent INTEGER NOT NULL REFERENCES agents(id), due TEXT,
                     status TEXT NOT NULL DEFAULT 'queued', result TEXT NOT NULL DEFAULT '',
                     version INTEGER NOT NULL DEFAULT 1, created TEXT NOT NULL);
+                CREATE TABLE IF NOT EXISTS dependencies(
+                    task INTEGER NOT NULL REFERENCES tasks(id),
+                    prerequisite INTEGER NOT NULL REFERENCES tasks(id),
+                    PRIMARY KEY(task, prerequisite));
                 CREATE TABLE IF NOT EXISTS events(
                     id INTEGER PRIMARY KEY, task INTEGER REFERENCES tasks(id),
                     message TEXT NOT NULL, created TEXT NOT NULL);
             ''')
+            if 'project' not in [r['name'] for r in db.execute('PRAGMA table_info(tasks)')]:
+                db.execute('ALTER TABLE tasks ADD COLUMN project INTEGER REFERENCES projects(id)')
+            db.execute('CREATE INDEX IF NOT EXISTS tasks_project ON tasks(project)')
             if not db.execute('SELECT 1 FROM agents').fetchone():
                 db.executemany('INSERT INTO agents(name,role) VALUES (?,?)', [
                     ('Research', 'Gather evidence and record sources'),
@@ -91,6 +124,8 @@ class Office:
             # One read transaction gives export and UI a consistent snapshot.
             db.execute('BEGIN')
             return {key: [dict(row) for row in db.execute(query)] for key, query in {
+                'projects': 'SELECT * FROM projects ORDER BY id DESC',
+                'dependencies': 'SELECT * FROM dependencies ORDER BY task, prerequisite',
                 'agents': 'SELECT * FROM agents ORDER BY id',
                 'tasks': 'SELECT * FROM tasks ORDER BY id DESC',
                 'events': 'SELECT * FROM events ORDER BY id DESC LIMIT 200'
@@ -101,7 +136,26 @@ class Office:
             raise ValueError('JSON object required')
         with closing(self.connect()) as db, db:
             db.execute('BEGIN IMMEDIATE')
-            if action == 'agents':
+            if action == 'job-project':
+                name = required(data, 'name', 120)
+                if db.execute('SELECT 1 FROM projects WHERE name=? COLLATE NOCASE', (name,)).fetchone():
+                    raise Conflict('A project with this name already exists. Choose a unique application name.')
+                project = db.execute('INSERT INTO projects(name,kind,created) VALUES (?,?,?)',
+                                     (name, 'job-application', utcnow())).lastrowid
+                # Reuse teams by name without overwriting customized instructions.
+                teams = []
+                for team, role in JOB_TEAMS:
+                    row = db.execute('SELECT id FROM agents WHERE name=? ORDER BY id LIMIT 1', (team,)).fetchone()
+                    teams.append(row['id'] if row else db.execute('INSERT INTO agents(name,role) VALUES (?,?)', (team, role)).lastrowid)
+                tasks = []
+                for team, title, brief, parents in JOB_STAGES:
+                    task = db.execute('INSERT INTO tasks(title,brief,agent,project,created) VALUES (?,?,?,?,?)',
+                                      (title, brief, teams[team], project, utcnow())).lastrowid
+                    tasks.append(task)
+                    db.executemany('INSERT INTO dependencies(task,prerequisite) VALUES (?,?)', [(task,tasks[parent]) for parent in parents])
+                    db.execute('INSERT INTO events(task,message,created) VALUES (?,?,?)', (task, 'Application workflow task created', utcnow()))
+                task, message = None, f'Job application project created: {name}'
+            elif action == 'agents':
                 name, role = required(data, 'name', 60), required(data, 'role', 500)
                 agent = data.get('id')
                 if agent is None:
@@ -135,6 +189,14 @@ class Office:
                 status = data.get('status', row['status'])
                 allowed = {'queued': ('queued', 'active'), 'active': ('active', 'review'),
                            'review': ('review', 'active', 'done'), 'done': ('done', 'queued')}
+                if row['status'] == 'queued' and status == 'active':
+                    waiting = db.execute('SELECT t.id FROM dependencies d JOIN tasks t ON t.id=d.prerequisite WHERE d.task=? AND t.status!=?', (task, 'done')).fetchall()
+                    if waiting:
+                        raise ValueError('Complete prerequisite tasks first: ' + ', '.join(str(t['id']) for t in waiting))
+                if row['status'] == 'done' and status == 'queued':
+                    started = db.execute('SELECT t.id FROM dependencies d JOIN tasks t ON t.id=d.task WHERE d.prerequisite=? AND t.status!=?', (task, 'queued')).fetchall()
+                    if started:
+                        raise ValueError('Reopen dependent tasks in reverse order before changing their input')
                 if status not in allowed[row['status']]:
                     raise ValueError('Invalid task transition')
                 result = data.get('result', row['result'])
@@ -209,7 +271,7 @@ def make_server(path, port=4521):
                 if self.headers.get('Content-Type', '').split(';')[0] != 'application/json':
                     raise ValueError('Use application/json')
                 data = json.loads(self.rfile.read(length))
-                action = {'/api/agents': 'agents', '/api/tasks': 'tasks', '/api/update': 'update'}.get(self.path)
+                action = {'/api/agents': 'agents', '/api/tasks': 'tasks', '/api/update': 'update', '/api/job-project': 'job-project'}.get(self.path)
                 if action is None:
                     return self.send(404, {'error': 'Not found'})
                 self.send(200, office.mutate(action, data))

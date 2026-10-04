@@ -41,7 +41,7 @@ python -m unittest discover -s portfolio/ai-office -v
 node --check portfolio/ai-office/app.js
 ```
 
-Twelve automated service/HTTP tests cover the review lifecycle, persistence after reopening the database, competing edits, timezone normalization, scheduled starts, agent changes, validation, exports, cross-origin rejection, and static assets.
+Fifteen automated service/HTTP tests cover the review lifecycle, persistence after reopening the database, competing edits, timezone normalization, scheduled starts, agent changes, validation, exports, cross-origin rejection, and static assets.
 
 Optional real browser verification:
 
@@ -53,12 +53,33 @@ python portfolio/ai-office/verify_browser.py
 
 GitHub Actions runs service tests on the portfolio Python matrix and the browser workflow on Chromium. The browser test checks agent creation, the full task lifecycle, reload persistence, search, and mobile overflow, staff reassignment, draft preservation, and bounded rendering of a board with 80 additional tasks. No latency benchmark or speedup percentage is claimed.
 
+## First project: Job Application Operations
+
+Use **Create application workflow** and give each opening a unique project name (company, role, and job reference). This creates eight specialist teams when needed and nine linked tasks, with a project filter and manager progress view. Existing staff instructions are preserved when a matching team name exists.
+
+| Team | Deliverable | Prerequisite |
+| --- | --- | --- |
+| Applications Manager | Applicant preferences and verified CV | None |
+| Job Discovery | Current opening, source URL, job description, duplicate check | Preferences |
+| Eligibility | Requirements, fit, missing facts | Opening |
+| CV Tailoring | Fact-based tailored CV | Eligibility |
+| Cover Letter | Fact-based letter draft | Eligibility |
+| Application QA | Reviewed package and recorded applicant approval | CV and letter |
+| Submission | Actual submission receipt or an unresolved blocker | QA |
+| Follow-up | Response or next follow-up plan | Submission |
+| Applications Manager | Final application report | Follow-up |
+
+The server enforces these prerequisites. Reopening an input is blocked if dependent work has already started; reopen dependent tasks in reverse order first. Duplicate project names are rejected case-insensitively. Task completion, reassignment, notes, and project history survive restart.
+
+**Execution boundary:** these are working coordination tools for manual tasks, not autonomous workers. There are no job-portal feeds, model calls, CV parsing/generation, or external submission integrations. The workspace never submits an application or sends a message. Team instructions require actual evidence; the software cannot independently verify a pasted receipt or applicant approval. Leave blocked tasks open. Only mark submitted after completing the application on the real portal. Add your master CV and preferences locally; do not commit personal application data to the public repository.
+
 ## API
 
 | Method | Path | Purpose |
 | --- | --- | --- |
 | GET | `/api/state` | Workspace plus ephemeral write token |
 | GET | `/api/export` | JSON snapshot without the token |
+| POST | `/api/job-project` | Create a project from a unique `name`, its team roster, tasks, and handoffs atomically |
 | POST | `/api/agents` | Create role; include `id` to edit |
 | POST | `/api/tasks` | Create `title`, `brief`, integer `agent`, optional ISO `due` with timezone |
 | POST | `/api/update` | Update task using integer `id`, current `version`, `status`, optional `result`, and optional integer `agent` |

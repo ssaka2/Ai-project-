@@ -99,6 +99,37 @@ class OfficeTests(unittest.TestCase):
         with self.assertRaises(ValueError): self.update(agent=99999)
         self.assertEqual(app.Office(self.path).snapshot()['tasks'][0]['agent'], agent)
 
+    def test_job_workflow_all_handoffs_and_reopening(self):
+        state = self.office.mutate('job-project', {'name':'Example company - Engineer'})
+        self.assertEqual(len(state['agents']), 20)
+        tasks = sorted([t for t in state['tasks'] if t['project']], key=lambda t:t['id'])
+        self.assertEqual(len(tasks), 9)
+        self.assertEqual(len(state['dependencies']), 9)
+        with self.assertRaises(ValueError):
+            self.office.mutate('update', {'id':tasks[1]['id'], 'version':1, 'status':'active'})
+        for task in tasks:
+            for version, status in [(1,'active'), (2,'review'), (3,'done')]:
+                self.office.mutate('update', {'id':task['id'], 'version':version, 'status':status, 'result':'Synthetic test evidence; no external action performed'})
+        snapshot = app.Office(self.path).snapshot()
+        self.assertTrue(all(t['status']=='done' for t in snapshot['tasks'] if t['project']))
+        with self.assertRaises(ValueError):
+            self.office.mutate('update', {'id':tasks[0]['id'], 'version':4, 'status':'queued'})
+        # Rework must move backwards through the dependency chain.
+        for task in reversed(tasks):
+            self.office.mutate('update', {'id':task['id'], 'version':4, 'status':'queued'})
+        self.assertTrue(all(t['status']=='queued' for t in self.office.snapshot()['tasks'] if t['project']))
+
+    def test_duplicate_projects_atomic_and_teams_reused(self):
+        self.office.mutate('job-project', {'name':'Opening A'})
+        with self.assertRaises(app.Conflict): self.office.mutate('job-project', {'name':'opening a'})
+        self.assertEqual(len(self.office.snapshot()['projects']), 1)
+        self.assertEqual(len(self.office.snapshot()['tasks']), 10)
+        self.office.mutate('job-project', {'name':'Opening B'})
+        state = self.office.snapshot()
+        self.assertEqual(len(state['agents']), 20)
+        self.assertEqual(len(state['projects']), 2)
+        self.assertEqual(len(state['tasks']), 19)
+
     def test_input_limits(self):
         for title in ['', ' ', 'x'*201, 3, None]:
             with self.assertRaises(ValueError): self.office.mutate('tasks', {'title':title,'brief':'x','agent':1})
@@ -137,6 +168,14 @@ class HttpTests(unittest.TestCase):
         _, export = self.get('/api/export')
         self.assertNotIn('token', export)
         self.assertEqual(export['tasks'][0]['status'], 'active')
+
+    def test_project_http_route(self):
+        code, state = self.post('/api/job-project', {'name':'HTTP opening'})
+        self.assertEqual(code, 200)
+        self.assertEqual(len(state['projects']), 1)
+        self.assertEqual(len(state['tasks']), 9)
+        self.assertEqual(self.post('/api/job-project', {'name':'HTTP opening'})[0], 409)
+        self.assertEqual(self.post('/api/job-project', {'name':'   '})[0], 400)
 
     def test_cross_origin_and_missing_token(self):
         for headers in [{'X-Office-Token':''},{'Origin':'https://unrelated.example'},{'Host':'attacker.example'}]:
