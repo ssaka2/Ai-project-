@@ -11,6 +11,7 @@ from urllib.parse import urlsplit
 
 ROOT = Path(__file__).resolve().parent
 STATUSES = ('queued', 'active', 'review', 'done')
+APPLICATION_STATES = ('not_applied', 'submitted', 'under_review', 'interview', 'offer', 'rejected', 'withdrawn', 'unknown', 'blocked')
 SPECIALISTS = (
     ('Planner', 'Break briefs into scoped tasks and acceptance criteria'),
     ('Frontend Engineer', 'Build accessible interfaces and responsive layouts'),
@@ -82,6 +83,11 @@ class Office:
                 CREATE TABLE IF NOT EXISTS projects(
                     id INTEGER PRIMARY KEY, name TEXT NOT NULL UNIQUE COLLATE NOCASE,
                     kind TEXT NOT NULL, created TEXT NOT NULL);
+                CREATE TABLE IF NOT EXISTS application_checks(
+                    id INTEGER PRIMARY KEY, project INTEGER NOT NULL REFERENCES projects(id),
+                    status TEXT NOT NULL, evidence TEXT NOT NULL, checked_at TEXT NOT NULL,
+                    next_check TEXT, recorded_at TEXT NOT NULL);
+                CREATE INDEX IF NOT EXISTS checks_project_id ON application_checks(project,id);
                 CREATE TABLE IF NOT EXISTS agents(
                     id INTEGER PRIMARY KEY, name TEXT NOT NULL, role TEXT NOT NULL);
                 CREATE TABLE IF NOT EXISTS tasks(
@@ -146,6 +152,7 @@ class Office:
             # One read transaction gives export and UI a consistent snapshot.
             db.execute('BEGIN')
             return {key: [dict(row) for row in db.execute(query)] for key, query in {
+                'checks': 'SELECT * FROM application_checks ORDER BY id DESC',
                 'projects': 'SELECT * FROM projects ORDER BY id DESC',
                 'dependencies': 'SELECT * FROM dependencies ORDER BY task, prerequisite',
                 'agents': 'SELECT * FROM agents ORDER BY id',
@@ -177,6 +184,30 @@ class Office:
                     db.executemany('INSERT INTO dependencies(task,prerequisite) VALUES (?,?)', [(task,tasks[parent]) for parent in parents])
                     db.execute('INSERT INTO events(task,message,created) VALUES (?,?,?)', (task, 'Application workflow task created', utcnow()))
                 task, message = None, f'Job application project created: {name}'
+            elif action == 'application-check':
+                project, revision = data.get('project'), data.get('revision')
+                if type(project) is not int or type(revision) is not int:
+                    raise ValueError('Integer project and revision required')
+                if not db.execute('SELECT 1 FROM projects WHERE id=?', (project,)).fetchone():
+                    raise ValueError('Unknown application project')
+                latest = db.execute('SELECT id,checked_at FROM application_checks WHERE project=? ORDER BY id DESC LIMIT 1', (project,)).fetchone()
+                if revision != (latest['id'] if latest else 0):
+                    raise Conflict('Application status changed. Refresh and select the project again.')
+                status = data.get('status')
+                if status not in APPLICATION_STATES:
+                    raise ValueError('Choose a supported application status')
+                evidence = required(data, 'evidence', 4000)
+                checked = due_date(data.get('checked_at'))
+                next_check = due_date(data.get('next_check'))
+                if not checked or datetime.fromisoformat(checked) > datetime.now(timezone.utc):
+                    raise ValueError('Last check must be a valid past or present timestamp')
+                if latest and datetime.fromisoformat(checked) < datetime.fromisoformat(latest['checked_at']):
+                    raise ValueError('Last check cannot predate the previous check')
+                if next_check and datetime.fromisoformat(next_check) <= datetime.fromisoformat(checked):
+                    raise ValueError('Next check must be after the last check')
+                db.execute('INSERT INTO application_checks(project,status,evidence,checked_at,next_check,recorded_at) VALUES (?,?,?,?,?,?)',
+                           (project, status, evidence, checked, next_check, utcnow()))
+                task, message = None, f'Application #{project}: status recorded as {status} (manual evidence)'
             elif action == 'agents':
                 name, role = required(data, 'name', 60), required(data, 'role', 500)
                 agent = data.get('id')
@@ -293,7 +324,7 @@ def make_server(path, port=4521):
                 if self.headers.get('Content-Type', '').split(';')[0] != 'application/json':
                     raise ValueError('Use application/json')
                 data = json.loads(self.rfile.read(length))
-                action = {'/api/agents': 'agents', '/api/tasks': 'tasks', '/api/update': 'update', '/api/job-project': 'job-project'}.get(self.path)
+                action = {'/api/agents': 'agents', '/api/tasks': 'tasks', '/api/update': 'update', '/api/job-project': 'job-project', '/api/application-check': 'application-check'}.get(self.path)
                 if action is None:
                     return self.send(404, {'error': 'Not found'})
                 self.send(200, office.mutate(action, data))

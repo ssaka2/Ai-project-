@@ -152,6 +152,36 @@ class OfficeTests(unittest.TestCase):
         with self.assertRaises(app.Conflict):
             self.office.mutate('update', {'id':status_task['id'], 'version':1, 'agent':followup})
 
+    def test_application_evidence_history_and_conflicts(self):
+        project = self.office.mutate('job-project', {'name':'Status test'})['projects'][0]['id']
+        data = {'project':project,'revision':0,'status':'submitted','evidence':'Synthetic receipt R1',
+                'checked_at':'2026-01-01T10:00:00Z','next_check':'2026-01-02T10:00:00Z'}
+        state = self.office.mutate('application-check', data)
+        check = state['checks'][0]
+        self.assertEqual(check['status'], 'submitted')
+        self.assertTrue(all(t['status']=='queued' for t in state['tasks']))
+        with self.assertRaises(app.Conflict): self.office.mutate('application-check', data)
+        self.office.mutate('application-check', {**data,'revision':check['id'],'status':'under_review',
+                                               'evidence':'Synthetic portal status', 'checked_at':'2026-01-01T11:00:00Z'})
+        saved = app.Office(self.path).snapshot()['checks']
+        self.assertEqual(len(saved), 2)
+        self.assertEqual(saved[0]['status'], 'under_review')
+        self.assertEqual(saved[1]['evidence'], 'Synthetic receipt R1')
+
+    def test_status_validation_and_nonchronological_checks(self):
+        project = self.office.mutate('job-project', {'name':'Validation test'})['projects'][0]['id']
+        data = {'project':project,'revision':0,'status':'unknown','evidence':'Portal unavailable',
+                'checked_at':'2026-01-01T10:00:00Z'}
+        for override in [{'evidence':''},{'status':'made_up'},{'checked_at':'2099-01-01T00:00:00Z'},
+                         {'checked_at':None},{'checked_at':'2026-01-01T10:00:00'},
+                         {'next_check':'2026-01-01T09:00:00Z'},{'project':True},{'project':99999}]:
+            with self.assertRaises(ValueError): self.office.mutate('application-check', {**data,**override})
+        self.assertEqual(self.office.snapshot()['checks'], [])
+        check = self.office.mutate('application-check', data)['checks'][0]
+        with self.assertRaises(ValueError):
+            self.office.mutate('application-check', {**data,'revision':check['id'],'checked_at':'2025-01-01T00:00:00Z'})
+        self.assertEqual(len(self.office.snapshot()['checks']), 1)
+
     def test_input_limits(self):
         for title in ['', ' ', 'x'*201, 3, None]:
             with self.assertRaises(ValueError): self.office.mutate('tasks', {'title':title,'brief':'x','agent':1})
@@ -190,6 +220,15 @@ class HttpTests(unittest.TestCase):
         _, export = self.get('/api/export')
         self.assertNotIn('token', export)
         self.assertEqual(export['tasks'][0]['status'], 'active')
+
+    def test_status_http_and_export(self):
+        _, state = self.post('/api/job-project', {'name':'HTTP status'})
+        payload = {'project':state['projects'][0]['id'],'revision':0,'status':'blocked',
+                   'evidence':'Synthetic portal sign-in needed','checked_at':'2026-01-01T00:00:00Z'}
+        self.assertEqual(self.post('/api/application-check',payload,{'X-Office-Token':''})[0],403)
+        self.assertEqual(self.post('/api/application-check',payload)[0],200)
+        self.assertEqual(self.post('/api/application-check',payload)[0],409)
+        self.assertEqual(self.get('/api/export')[1]['checks'][0]['status'],'blocked')
 
     def test_project_http_route(self):
         code, state = self.post('/api/job-project', {'name':'HTTP opening'})

@@ -28,14 +28,26 @@ function render() {
   for(const edge of state.dependencies || []) {if(!prerequisites.has(edge.task)) prerequisites.set(edge.task, []);prerequisites.get(edge.task).push(edge.prerequisite);}
   const projectSelection = $('project-filter').value;
   $('project-filter').replaceChildren(); const all=el('option','All projects and standalone tasks');all.value='';$('project-filter').append(all);
+  const statusSelection=$('status-project').value;
+  $('status-project').replaceChildren();const choose=el('option','Choose an application');choose.value='';$('status-project').append(choose);
   $('projects').replaceChildren();
   for(const project of state.projects || []) {
     const option=el('option',project.name);option.value=project.id;$('project-filter').append(option);
+    const statusOption=el('option',project.name);statusOption.value=project.id;$('status-project').append(statusOption);
     const tasks=state.tasks.filter(t=>t.project===project.id), completed=tasks.filter(t=>t.status==='done').length;
     const ready=tasks.filter(t=>t.status==='queued' && !(prerequisites.get(t.id)||[]).some(id=>taskById.get(id)?.status!=='done'));
     const line=el('div',undefined,'agent');line.append(el('strong',project.name),el('p',`${completed}/${tasks.length} completed · ${ready.length} ready for handoff`));
+    const check=(state.checks || []).find(c=>c.project===project.id);
+    if(check) {
+      line.append(el('p',`Recorded status: ${check.status.replaceAll('_',' ')} · Checked: ${new Date(check.checked_at).toLocaleString()}`));
+      if(check.next_check) line.append(el('p',`${new Date(check.next_check)<=new Date() ? 'Check due' : 'Next check'}: ${new Date(check.next_check).toLocaleString()}`, 'schedule'));
+      const evidence=el('details');evidence.append(el('summary','Status evidence and history'));
+      for(const item of (state.checks || []).filter(c=>c.project===project.id)) evidence.append(el('p',`${new Date(item.checked_at).toLocaleString()} · ${item.status.replaceAll('_',' ')}\n${item.evidence}`));
+      line.append(evidence);
+    } else line.append(el('p','Application status not recorded.'));
     const view=el('button','View tasks','secondary');view.onclick=()=>{$('project-filter').value=String(project.id);renderBoard();};line.append(view);$('projects').append(line);
   }
+  if((state.projects || []).some(p=>String(p.id)===statusSelection)) $('status-project').value=statusSelection;
   if((state.projects || []).some(p=>String(p.id)===projectSelection)) $('project-filter').value=projectSelection;
   agentById = new Map(state.agents.map(a => [a.id, a]));
   workload = new Map(state.agents.map(a => [a.id, 0]));
@@ -96,3 +108,16 @@ $('refresh').onclick=load; let searchTimer; $('search').oninput=()=>{clearTimeou
 
 $('project-filter').onchange=()=>{for(const key of Object.keys(limits)) limits[key]=PAGE_SIZE;renderBoard();};
 $('project-form').onsubmit=async(e)=>{e.preventDefault();const f=e.target,b=f.querySelector('button');b.disabled=true;try{await save('/api/job-project',{name:f.elements.name.value});f.reset();}catch(err){report(err.message,true);}finally{b.disabled=false;}};
+
+function localTime(value) {const d=new Date(value);return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,19);}
+$('status-project').onchange=()=>{
+  const f=$('status-form'), check=(state.checks || []).find(c=>String(c.project)===f.elements.project.value);
+  f.elements.revision.value=check?.id || 0;f.elements.status.value=check?.status || 'unknown';
+  f.elements.evidence.value=check?.evidence || '';f.elements.checked_at.value=localTime(new Date());
+  f.elements.next_check.value=check?.next_check ? localTime(check.next_check) : '';
+};
+$('status-form').onsubmit=async(e)=>{
+  e.preventDefault();const f=e.target,b=f.querySelector('button');b.disabled=true;
+  try {await save('/api/application-check',{project:Number(f.elements.project.value),revision:Number(f.elements.revision.value),status:f.elements.status.value,evidence:f.elements.evidence.value,checked_at:new Date(f.elements.checked_at.value).toISOString(),next_check:f.elements.next_check.value ? new Date(f.elements.next_check.value).toISOString() : null});f.reset();}
+  catch(err){report(err.message,true);}finally{b.disabled=false;}
+};

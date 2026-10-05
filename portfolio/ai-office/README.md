@@ -41,7 +41,7 @@ python -m unittest discover -s portfolio/ai-office -v
 node --check portfolio/ai-office/app.js
 ```
 
-Sixteen automated service/HTTP tests cover the review lifecycle, persistence after reopening the database, competing edits, timezone normalization, scheduled starts, agent changes, validation, exports, cross-origin rejection, and static assets.
+Nineteen automated service/HTTP tests cover the review lifecycle, persistence after reopening the database, competing edits, timezone normalization, scheduled starts, agent changes, validation, exports, cross-origin rejection, and static assets.
 
 Optional real browser verification:
 
@@ -75,12 +75,25 @@ The server enforces these prerequisites. Reopening an input is blocked if depend
 
 **Execution boundary:** these are working coordination tools for manual tasks, not autonomous workers. There are no job-portal feeds, model calls, CV parsing/generation, or external submission integrations. The workspace never submits an application or sends a message. Team instructions require actual evidence; the software cannot independently verify a pasted receipt or applicant approval. Leave blocked tasks open. Only mark submitted after completing the application on the real portal. Add your master CV and preferences locally; do not commit personal application data to the public repository.
 
+## Application status desk
+
+The Submission Team now has a structured status record per application, separate from task progress. Select an application, record its observed status and evidence (portal/email reference or access blocker), enter when it was checked, and optionally schedule the next check. The manager sees the latest record, full recorded history, and a **Check due** label after the next-check time. Refresh to recompute due labels; there is no background monitor or notification service.
+
+Supported states: not applied, submitted, under review, interview, offer, rejected, withdrawn, unknown, and blocked. Evidence is mandatory; check times cannot be in the future or older than the previous check. Next check must follow the last check. Concurrent stale updates return 409. The latest record and all earlier records survive restart and are included in JSON export. Saving a record never changes task completion or performs an external submission.
+
+Evidence is entered by the local user and is not independently verified. Use Unknown or Blocked when portal/email access cannot confirm a status. Do not place passwords or sign-in tokens in evidence. Unsaved status-form input survives ordinary board saves/refreshes but not a full browser reload; after a conflict, preserve your text, refresh, and reselect the application to load the latest revision.
+
+### Plugin integration boundary
+
+ChatGPT-connected plugins are available to the assistant in the conversation; they are not automatically installed, authenticated, or callable by this standalone Python application. GitHub is used for code and CI. Outlook Email could support reading receipts/status messages after connection; a document provider could supply the approved master CV. Those runtime integrations, credential handling, job feeds, and model execution are not implemented here. No plugin credentials or personal application records are committed to this public repository. The existing eight teams are sufficient for this workflow; adding more names does not connect external services.
+
 ## API
 
 | Method | Path | Purpose |
 | --- | --- | --- |
 | GET | `/api/state` | Workspace plus ephemeral write token |
 | GET | `/api/export` | JSON snapshot without the token |
+| POST | `/api/application-check` | Append status evidence with integer `project`, current check-id `revision` (0 initially), `status`, `evidence`, timezone-aware `checked_at`, optional `next_check` |
 | POST | `/api/job-project` | Create a project from a unique `name`, its team roster, tasks, and handoffs atomically |
 | POST | `/api/agents` | Create role; include `id` to edit |
 | POST | `/api/tasks` | Create `title`, `brief`, integer `agent`, optional ISO `due` with timezone |
