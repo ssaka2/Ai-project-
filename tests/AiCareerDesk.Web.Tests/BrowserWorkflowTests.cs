@@ -167,7 +167,14 @@ public class BrowserWorkflowTests
             await Expect(page.GetByRole(AriaRole.Link, new() { Name = "Sign in", Exact = true })).ToBeVisibleAsync();
             await page.GotoAsync("/Identity/Account/ForgotPassword");
             await page.GetByLabel("Email", new() { Exact = true }).FillAsync(email);
-            await page.Locator("main form button[type=submit]").ClickAsync();
+            // Observe the real submission, not just the eventual URL. This distinguishes
+            // a missing POST from validation/server failures without retrying the click.
+            var resetResponse = await page.RunAndWaitForResponseAsync(
+                () => page.Locator("main form button[type=submit]").ClickAsync(),
+                response => response.Request.Method == "POST" &&
+                    new Uri(response.Url).AbsolutePath == "/Identity/Account/ForgotPassword",
+                new() { Timeout = 30000 });
+            Assert.Equal(302, resetResponse.Status);
             await Expect(page).ToHaveURLAsync(new Regex(@"/Identity/Account/ForgotPasswordConfirmation$"), new() { Timeout = 30000 });
             await Expect(page.GetByRole(AriaRole.Heading, new() { Name = "Forgot password confirmation", Exact = true })).ToBeVisibleAsync();
             await page.GotoAsync(await EmailLink(email, "Reset"));

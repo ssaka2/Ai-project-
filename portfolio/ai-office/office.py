@@ -162,6 +162,8 @@ class Office:
                     id INTEGER PRIMARY KEY, task INTEGER REFERENCES tasks(id),
                     message TEXT NOT NULL, created TEXT NOT NULL);
             ''')
+            if 'context_digest' not in [r['name'] for r in db.execute('PRAGMA table_info(ai_drafts)')]:
+                db.execute('ALTER TABLE ai_drafts ADD COLUMN context_digest TEXT')
             recruiting.initialize(db)
             if 'project' not in [r['name'] for r in db.execute('PRAGMA table_info(tasks)')]:
                 db.execute('ALTER TABLE tasks ADD COLUMN project INTEGER REFERENCES projects(id)')

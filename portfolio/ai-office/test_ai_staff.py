@@ -57,6 +57,28 @@ class AIStaffTests(unittest.TestCase):
                 self.assertEqual(state['tasks'][0]['status'],'active')
         self.assertEqual(len(self.app.snapshot()['ai_drafts']),30)
 
+    def test_cached_draft_rejects_changed_role_and_model(self):
+        ai_staff.draft(self.app,self.data,office.utcnow,lambda m,p:'Original draft')
+        self.app.mutate('agents',{'id':1,'name':'Research','role':'Changed task instructions'})
+        with self.assertRaisesRegex(ValueError,'stale'):
+            ai_staff.draft(self.app,self.data,office.utcnow,lambda m,p:self.fail('Should require new task version'))
+        self.app.mutate('update',{'id':self.task['id'],'version':2,'result':'Refreshed source'})
+        ai_staff.draft(self.app,{'id':self.task['id'],'version':3},office.utcnow,lambda m,p:'Fresh draft')
+        with patch.dict('os.environ',{'AI_OFFICE_MODEL':'different-model'}):
+            with self.assertRaisesRegex(ValueError,'stale'):
+                ai_staff.draft(self.app,{'id':self.task['id'],'version':3},office.utcnow)
+        self.assertEqual(len(self.app.snapshot()['ai_drafts']),2)
+
+    def test_legacy_draft_is_preserved_but_not_trusted_as_current(self):
+        from contextlib import closing
+        with closing(self.app.connect()) as db,db:
+            db.execute('INSERT INTO ai_drafts(task,task_version,model,content,created) VALUES (?,?,?,?,?)',
+                       (self.task['id'],2,'fixture-model','Legacy draft',office.utcnow()))
+        reopened=office.Office(self.path)
+        with self.assertRaisesRegex(ValueError,'stale'):
+            ai_staff.draft(reopened,self.data,office.utcnow)
+        self.assertEqual(reopened.snapshot()['ai_drafts'][0]['content'],'Legacy draft')
+
     def test_http_adapter_contract_and_failure(self):
         class Response:
             def __enter__(self):return self

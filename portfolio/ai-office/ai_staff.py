@@ -1,5 +1,6 @@
 """Optional local-model drafting. No tool execution, external submission or auto-approval."""
 import json
+import hashlib
 import os
 import re
 import threading
@@ -64,15 +65,19 @@ def draft(office,data,clock,provider=None):
         with closing(office.connect()) as db,db:
             db.execute('BEGIN')
             prompt=context(db,task_id,version)
-            existing=db.execute('SELECT 1 FROM ai_drafts WHERE task=? AND task_version=?',(task_id,version)).fetchone()
-        if existing:return office.snapshot()
+            fingerprint=hashlib.sha256((SYSTEM+'\n'+model+'\n'+prompt).encode()).hexdigest()
+            existing=db.execute('SELECT context_digest FROM ai_drafts WHERE task=? AND task_version=?',(task_id,version)).fetchone()
+        if existing:
+            if existing['context_digest']!=fingerprint:
+                raise ValueError('Existing AI draft is stale or its source cannot be verified. Save the task to create a new version, then generate again. The old draft has been preserved.')
+            return office.snapshot()
         result=(provider or generate)(model,prompt)
         if not isinstance(result,str) or not result.strip() or len(result)>18000:raise ValueError('Invalid AI draft')
         with closing(office.connect()) as db,db:
             db.execute('BEGIN IMMEDIATE')
             if context(db,task_id,version)!=prompt:raise ValueError('Task or source context changed during generation; draft discarded. Refresh and try again.')
-            db.execute('INSERT OR IGNORE INTO ai_drafts(task,task_version,model,content,created) VALUES (?,?,?,?,?)',
-                       (task_id,version,model,'UNVERIFIED AI DRAFT — review facts before use. No external action performed.\n\n'+result,clock()))
+            db.execute('INSERT OR IGNORE INTO ai_drafts(task,task_version,model,content,created,context_digest) VALUES (?,?,?,?,?,?)',
+                       (task_id,version,model,'UNVERIFIED AI DRAFT — review facts before use. No external action performed.\n\n'+result,clock(),fingerprint))
             db.execute('INSERT INTO events(task,message,created) VALUES (?,?,?)',(task_id,'AI draft saved separately; task status unchanged',clock()))
         return office.snapshot()
     finally:LOCK.release()

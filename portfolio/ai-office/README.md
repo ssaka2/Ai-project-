@@ -41,7 +41,7 @@ python -m unittest discover -s portfolio/ai-office -v
 node --check portfolio/ai-office/app.js
 ```
 
-Sixty-four automated service/HTTP tests cover the review lifecycle, persistence after reopening the database, competing edits, timezone normalization, scheduled starts, agent changes, validation, exports, cross-origin rejection, and static assets.
+Sixty-six automated service/HTTP tests cover the review lifecycle, persistence after reopening the database, competing edits, timezone normalization, scheduled starts, agent changes, validation, exports, cross-origin rejection, and static assets.
 
 Optional real browser verification:
 
@@ -169,7 +169,7 @@ Tests verify unknown-status handling, evidence/timestamps, candidate and applica
 
 ## Reliability verification — October 5, 2026
 
-The expanded suite has 64 service/HTTP tests. Additional regression coverage checks extreme timestamp conversion, oversized/negative IDs, non-ASCII write tokens, deeply nested JSON recovery, malformed discovery input, stopped campaign scan metadata, atomic rollback after a malformed job, concurrent discovery exclusion, and rejected source redirects. Invalid requests return controlled errors instead of disconnecting the client. A paused campaign no longer updates its last-scan timestamp without a source request.
+The expanded suite has 66 service/HTTP tests. Additional regression coverage checks extreme timestamp conversion, oversized/negative IDs, non-ASCII write tokens, deeply nested JSON recovery, malformed discovery input, stopped campaign scan metadata, atomic rollback after a malformed job, concurrent discovery exclusion, and rejected source redirects. Invalid requests return controlled errors instead of disconnecting the client. A paused campaign no longer updates its last-scan timestamp without a source request.
 
 During a save, form controls and board navigation are disabled to prevent edits from being silently cleared when the response arrives. Older refresh responses cannot replace state from a newer save. Browser verification checks this lock and its release, literal rendering of HTML-like chat messages, and the existing candidate, application, duplicate protection, staff chat, persistence, and mobile flows. This is functional verification using synthetic candidate data and feed fixtures; no live applications or employer inbox checks are performed.
 
@@ -200,6 +200,11 @@ AI_OFFICE_MODEL='your-installed-model-name' python portfolio/ai-office/office.py
 
 Start a task, save its notes, and request the draft. Review its factual claims and use the existing result/review flow. Requests go only to `http://127.0.0.1:11434/api/generate`, with proxy use and redirects disabled, a 45-second socket timeout and a response-size cap. No model is bundled or downloaded automatically. A configured name does not prove the model is installed or responsive. Missing configuration/failures return an error without changing task state. Only one inference request runs at a time in this process. Inference may continue in Ollama after a client timeout; no automatic retry occurs.
 
-Repeated requests for the same task version reuse the existing draft. If saved task/context changes during generation, the response is discarded. Old drafts are marked with their task version and remain in exports. Unsaved notes must be saved or discarded first. Drafting does not complete tasks, approve CVs, submit applications, read email, or guarantee employment. System instructions discourage unsupported claims, but model factual accuracy is **not guaranteed**; review remains required. No self-modifying agent or automatic model training is implemented.
+Repeated requests reuse a draft only when its task version, source-context fingerprint, model, and system instructions still match. If saved task/context changes during generation, the response is discarded. Old drafts are marked with their task version and remain in exports. Unsaved notes must be saved or discarded first. Drafting does not complete tasks, approve CVs, submit applications, read email, or guarantee employment. System instructions discourage unsupported claims, but model factual accuracy is **not guaranteed**; review remains required. No self-modifying agent or automatic model training is implemented.
 
 The adapter and all-role drafting paths are tested with fixtures, including timeout, bad output, missing configuration, duplicate generation, changed-task rejection, and candidate-context isolation. Live model quality and throughput have not been tested here because Ollama/model configuration is absent. Browser CI verifies the missing-runtime path rather than claiming real inference. Protocol: https://docs.ollama.com/api/generate.
+
+
+### Draft freshness correction
+
+AI drafts now store a SHA-256 fingerprint of their source context, model, and system instructions. A changed CV, staff instructions, prerequisites, or rejection lessons prevents reuse of an older draft, even when the task version is unchanged. Save the task to create a new version before regenerating. Legacy drafts with no fingerprint remain readable but are not trusted as current. This verifies source consistency, not the factual accuracy of model output.
