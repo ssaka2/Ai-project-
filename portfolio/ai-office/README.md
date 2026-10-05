@@ -41,7 +41,7 @@ python -m unittest discover -s portfolio/ai-office -v
 node --check portfolio/ai-office/app.js
 ```
 
-Forty-two automated service/HTTP tests cover the review lifecycle, persistence after reopening the database, competing edits, timezone normalization, scheduled starts, agent changes, validation, exports, cross-origin rejection, and static assets.
+Forty-eight automated service/HTTP tests cover the review lifecycle, persistence after reopening the database, competing edits, timezone normalization, scheduled starts, agent changes, validation, exports, cross-origin rejection, and static assets.
 
 Optional real browser verification:
 
@@ -165,3 +165,10 @@ Conversation history persists by candidate/staff, survives reload, and is includ
 **Access boundary:** this is still a single trusted local workspace. The candidate selector is not authentication; the operator can view all candidates and exports contain all chats. There are no separate candidate accounts, remote candidate portal, private multi-user permissions, live staff messaging, or notifications. Do not expose this server online. A secure candidate-facing service needs authentication and server-side authorization before separate candidates can access it privately.
 
 Tests verify unknown-status handling, evidence/timestamps, candidate and application scoping, read-only application behavior, all staff roles, validation, persistence, HTTP authorization, and browser conversations with two staff roles.
+
+
+## Reliability verification — October 5, 2026
+
+The expanded suite has 48 service/HTTP tests. Additional regression coverage checks extreme timestamp conversion, oversized/negative IDs, non-ASCII write tokens, deeply nested JSON recovery, malformed discovery input, stopped campaign scan metadata, atomic rollback after a malformed job, concurrent discovery exclusion, and rejected source redirects. Invalid requests return controlled errors instead of disconnecting the client. A paused campaign no longer updates its last-scan timestamp without a source request.
+
+During a save, form controls and board navigation are disabled to prevent edits from being silently cleared when the response arrives. Older refresh responses cannot replace state from a newer save. Browser verification checks this lock and its release, literal rendering of HTML-like chat messages, and the existing candidate, application, duplicate protection, staff chat, persistence, and mobile flows. This is functional verification using synthetic candidate data and feed fixtures; no live applications or employer inbox checks are performed.

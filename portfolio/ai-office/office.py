@@ -105,7 +105,7 @@ def due_date(value):
         if parsed.tzinfo is None:
             raise ValueError()
         return parsed.astimezone(timezone.utc).isoformat()
-    except ValueError:
+    except (ValueError, OverflowError):
         raise ValueError('due must be an ISO timestamp with timezone') from None
 
 
@@ -215,6 +215,10 @@ class Office:
     def mutate(self, action, data):
         if not isinstance(data, dict):
             raise ValueError('JSON object required')
+        for key in ('id','version','project','candidate','agent','revision'):
+            value = data.get(key)
+            if type(value) is int and not 0 <= value <= 2**63-1:
+                raise ValueError(f'{key} is outside the supported integer range')
         with closing(self.connect()) as db, db:
             db.execute('BEGIN IMMEDIATE')
             if action == 'staff-chat':
@@ -414,7 +418,8 @@ def make_server(path, port=4521):
             self.send(200, (ROOT / name).read_bytes(), mime)
 
         def do_POST(self):
-            if not self.valid_host() or not secrets.compare_digest(self.headers.get('X-Office-Token', ''), token):
+            supplied_token = self.headers.get('X-Office-Token', '')
+            if not self.valid_host() or not supplied_token.isascii() or not secrets.compare_digest(supplied_token, token):
                 return self.send(403, {'error': 'Reload the local page before saving'})
             origin = self.headers.get('Origin')
             if origin and origin != 'http://' + self.headers.get('Host', ''):
@@ -426,6 +431,8 @@ def make_server(path, port=4521):
                 if self.headers.get('Content-Type', '').split(';')[0] != 'application/json':
                     raise ValueError('Use application/json')
                 data = json.loads(self.rfile.read(length))
+                if not isinstance(data,dict):
+                    raise ValueError('JSON object required')
                 if self.path == '/api/discover':
                     recruiting.scan(office)
                     return self.send(200, office.snapshot())
@@ -435,6 +442,8 @@ def make_server(path, port=4521):
                 self.send(200, office.mutate(action, data))
             except Conflict as exc:
                 self.send(409, {'error': str(exc)})
+            except RecursionError:
+                self.send(400, {'error': 'JSON nesting is too deep'})
             except (ValueError, UnicodeError) as exc:
                 self.send(400, {'error': str(exc)})
             except sqlite3.Error:

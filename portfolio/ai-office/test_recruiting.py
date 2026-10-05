@@ -93,6 +93,50 @@ class RecruitingTests(unittest.TestCase):
         self.assertEqual(self.app.snapshot()['campaigns'][0]['revision'],1)
         with self.assertRaises(ValueError):recruiting.fetch_board('../internal')
 
+    def test_paused_campaign_does_not_report_fake_scan(self):
+        self.app.mutate('application-check',{'project':self.candidate,'revision':0,'status':'paused','evidence':'Fixture pause','checked_at':office.utcnow()})
+        before=self.app.snapshot()['campaigns'][0]
+        self.due()
+        def unexpected(board):self.fail('Paused campaign contacted source')
+        recruiting.scan(self.app,unexpected)
+        after=self.app.snapshot()['campaigns'][0]
+        self.assertEqual(after['last_run'],before['last_run'])
+        self.assertIsNone(after['next_run'])
+
+    def test_source_transaction_rolls_back_partial_baseline(self):
+        bad={**self.job,'id':'bad','location':None}
+        self.assertEqual(self.scan([self.job,bad]),[])
+        self.assertEqual(self.scan([self.job])[0]['outcome'],'baseline')
+
+    def test_competing_scans_fetch_once(self):
+        import concurrent.futures
+        import threading
+        entered,release=threading.Event(),threading.Event()
+        calls=[]
+        def fetch(board):
+            calls.append(board);entered.set()
+            if not release.wait(3):raise TimeoutError('test deadline')
+            return [self.job]
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+            first=pool.submit(recruiting.scan,self.app,fetch)
+            self.assertTrue(entered.wait(3))
+            try:pool.submit(recruiting.scan,self.app,fetch).result(timeout=3)
+            finally:release.set()
+            first.result(timeout=3)
+        self.assertEqual(calls,['example'])
+        self.assertEqual(len(self.app.snapshot()['job_queue']),1)
+
+    def test_redirect_and_malformed_source_rejected(self):
+        with self.assertRaises(ValueError):
+            recruiting.NoRedirect().redirect_request(None,None,302,'redirect',{},'http://127.0.0.1/')
+        class Response:
+            def __enter__(self):return self
+            def __exit__(self,*args):pass
+            def read(self,size):return json.dumps({'jobs':[{'id':1,'internal_job_id':2,'title':'Engineer','content':'C#','location':None}]}).encode()
+        with patch('recruiting.build_opener') as opener:
+            opener.return_value.open.return_value=Response()
+            with self.assertRaises(ValueError):recruiting.fetch_board('example')
+
     def test_provider_parser(self):
         class Response:
             def __enter__(self):return self

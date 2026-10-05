@@ -102,7 +102,10 @@ def fetch_board(board):
             continue
         if type(item.get('id')) is not int or not isinstance(item.get('title'),str) or not isinstance(item.get('content'),str):
             raise ValueError('Incomplete job entry')
-        location = item.get('location',{}).get('name','')
+        location_object = item.get('location')
+        if not isinstance(location_object,dict):
+            raise ValueError('Invalid job location')
+        location = location_object.get('name','')
         url = item.get('absolute_url','')
         if not isinstance(location,str) or not isinstance(url,str) or not url.startswith('https://'):
             raise ValueError('Invalid job location or URL')
@@ -147,12 +150,14 @@ def scan(office, fetcher=fetch_board):
             if campaign['next_run'] and campaign['next_run']>now():
                 continue
             errors=[]
+            attempted=False
             for board in json.loads(campaign['boards']):
                 try:
                     # Check stop conditions before making any network request.
                     with closing(office.connect()) as db:
                         if not active(db,campaign):
                             break
+                    attempted=True
                     jobs=fetcher(board)
                     with closing(office.connect()) as db, db:
                         db.execute('BEGIN IMMEDIATE')
@@ -169,6 +174,8 @@ def scan(office, fetcher=fetch_board):
                 except Exception as exc:
                     # Avoid returning third-party content, URLs or credentials in errors.
                     errors.append(f'{board}: {type(exc).__name__}; retry next cycle')
+            if not attempted:
+                continue
             with closing(office.connect()) as db, db:
                 db.execute('UPDATE recruiting_campaigns SET last_run=?,next_run=?,error=? WHERE candidate=? AND revision=?',
                            (now(),(datetime.now(timezone.utc)+timedelta(minutes=15)).isoformat(),'; '.join(errors),campaign['candidate'],campaign['revision']))

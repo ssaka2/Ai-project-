@@ -277,6 +277,22 @@ class HttpTests(unittest.TestCase):
         self.assertEqual(len(state['tasks']),12)
         self.assertEqual(self.post('/api/candidate-project',payload)[0],409)
 
+    def test_hostile_inputs_return_errors_without_mutation(self):
+        for agent in (10**100,-1):
+            self.assertEqual(self.post('/api/tasks',{'title':'x','brief':'x','agent':agent})[0],400)
+        for due in ('0001-01-01T00:00:00+01:00','9999-12-31T23:59:59-01:00'):
+            self.assertEqual(self.post('/api/tasks',{'title':'x','brief':'x','agent':1,'due':due})[0],400)
+        self.assertEqual(self.post('/api/discover',[])[0],400)
+        self.assertEqual(self.post('/api/tasks',{}, {'X-Office-Token':'é'})[0],403)
+        self.assertEqual(self.get('/api/state')[1]['tasks'],[])
+
+    def test_deep_json_returns_400_and_server_recovers(self):
+        request=Request(self.base+'/api/tasks',('['*1200+'0'+']'*1200).encode(),headers={
+            'Content-Type':'application/json','X-Office-Token':self.token})
+        with self.assertRaises(HTTPError) as error:urlopen(request)
+        self.assertEqual(error.exception.code,400)
+        self.assertEqual(self.get('/api/state')[1]['tasks'],[])
+
     def test_staff_chat_http(self):
         _,state=self.post('/api/candidate-project',{'name':'Chat candidate','profile':'Synthetic'})
         data={'candidate':state['projects'][0]['id'],'agent':state['agents'][0]['id'],'question':'What is my status?'}
