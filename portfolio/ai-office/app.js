@@ -62,7 +62,7 @@ function render() {
   const selected = $('agent-select').value; $('agent-select').replaceChildren(); $('agents').replaceChildren();
   for(const agent of state.agents) {
     const option = el('option', agent.name); option.value = agent.id; $('agent-select').append(option);
-    const card = el('div', undefined, 'agent'); card.append(el('strong', agent.name), el('p', agent.role), el('p', `${workload.get(agent.id) || 0} open tasks`, 'eyebrow'));
+    const card = el('div', undefined, 'agent'); card.append(el('strong', agent.name), el('p', agent.role), el('p', 'Manual task role · Automated records chat available'), el('p', `${workload.get(agent.id) || 0} open tasks`, 'eyebrow'));
     const edit = el('button', 'Edit', 'secondary'); edit.onclick = () => {const f = $('agent-form'); for(const k of ['id','name','role']) f.elements[k].value = agent[k]; f.elements.name.focus();}; card.append(edit); $('agents').append(card);
   }
   if(state.agents.some(a => String(a.id) === selected)) $('agent-select').value = selected;

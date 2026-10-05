@@ -164,7 +164,7 @@ class Office:
             db.execute('INSERT OR IGNORE INTO migrations(name) VALUES (?)', ('specialist-roster-v1',))
             if db.execute('SELECT changes()').fetchone()[0]:
                 for name, role in SPECIALISTS:
-                    if not db.execute('SELECT 1 FROM agents WHERE name=?', (name,)).fetchone():
+                    if not db.execute('SELECT 1 FROM agents WHERE name=? COLLATE NOCASE', (name,)).fetchone():
                         db.execute('INSERT INTO agents(name,role) VALUES (?,?)', (name, role))
 
 
@@ -268,7 +268,7 @@ class Office:
                 # Reuse teams by name without overwriting customized instructions.
                 teams = []
                 for team, role in (PLACEMENT_TEAMS if placement else JOB_TEAMS):
-                    row = db.execute('SELECT id FROM agents WHERE name=? ORDER BY id LIMIT 1', (team,)).fetchone()
+                    row = db.execute('SELECT id FROM agents WHERE name=? COLLATE NOCASE ORDER BY id LIMIT 1', (team,)).fetchone()
                     teams.append(row['id'] if row else db.execute('INSERT INTO agents(name,role) VALUES (?,?)', (team, role)).lastrowid)
                 tasks = []
                 for team, title, brief, parents in (PLACEMENT_STAGES if placement else JOB_STAGES):

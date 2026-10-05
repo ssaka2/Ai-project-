@@ -41,7 +41,7 @@ python -m unittest discover -s portfolio/ai-office -v
 node --check portfolio/ai-office/app.js
 ```
 
-Forty-eight automated service/HTTP tests cover the review lifecycle, persistence after reopening the database, competing edits, timezone normalization, scheduled starts, agent changes, validation, exports, cross-origin rejection, and static assets.
+Fifty-two automated service/HTTP tests cover the review lifecycle, persistence after reopening the database, competing edits, timezone normalization, scheduled starts, agent changes, validation, exports, cross-origin rejection, and static assets.
 
 Optional real browser verification:
 
@@ -169,6 +169,11 @@ Tests verify unknown-status handling, evidence/timestamps, candidate and applica
 
 ## Reliability verification — October 5, 2026
 
-The expanded suite has 48 service/HTTP tests. Additional regression coverage checks extreme timestamp conversion, oversized/negative IDs, non-ASCII write tokens, deeply nested JSON recovery, malformed discovery input, stopped campaign scan metadata, atomic rollback after a malformed job, concurrent discovery exclusion, and rejected source redirects. Invalid requests return controlled errors instead of disconnecting the client. A paused campaign no longer updates its last-scan timestamp without a source request.
+The expanded suite has 52 service/HTTP tests. Additional regression coverage checks extreme timestamp conversion, oversized/negative IDs, non-ASCII write tokens, deeply nested JSON recovery, malformed discovery input, stopped campaign scan metadata, atomic rollback after a malformed job, concurrent discovery exclusion, and rejected source redirects. Invalid requests return controlled errors instead of disconnecting the client. A paused campaign no longer updates its last-scan timestamp without a source request.
 
 During a save, form controls and board navigation are disabled to prevent edits from being silently cleared when the response arrives. Older refresh responses cannot replace state from a newer save. Browser verification checks this lock and its release, literal rendering of HTML-like chat messages, and the existing candidate, application, duplicate protection, staff chat, persistence, and mobile flows. This is functional verification using synthetic candidate data and feed fixtures; no live applications or employer inbox checks are performed.
+
+
+## Staff role audit
+
+All 30 built-in roles are covered by `test_roles.py`: assignment, reassignment, full review/completion lifecycle, persisted chat, and restart persistence. Both templates are checked stage by stage for the correct owner and dependency edges. Case-only team renames now reuse the same staff record and preserve customized instructions when new workflows are created. Chat explicitly reports the selected role’s open-task count, including zero, and staff cards identify manual execution. See [ROLE_AUDIT.md](ROLE_AUDIT.md) for each role’s scope and limits.

@@ -37,6 +37,10 @@ def reply(db, candidate, agent, question, project=None):
             lines.append('Blocker: duplicate protection is not registered; submission steps are blocked.')
     if not jobs:
         lines.append('No linked application records yet. Discovery queue entries are not submitted applications.')
+    assigned=db.execute('''SELECT COUNT(*) FROM tasks WHERE agent=? AND status!='done'
+        AND (project=? OR project IN (SELECT id FROM projects WHERE candidate=?))''',
+        (agent,project or candidate,candidate if project is None else -1)).fetchone()[0]
+    lines.append(f"Selected staff role has {assigned} open task(s) in this view. Tasks require manual execution; chat does not perform them.")
     if any(word in q for word in ('next','block','pending','help','cv','resume','interview')):
         tasks=db.execute("""SELECT t.id,t.title,t.status,a.name FROM tasks t JOIN agents a ON a.id=t.agent
             WHERE t.status!='done' AND (t.project=? OR t.project IN (SELECT id FROM projects WHERE candidate=?))
