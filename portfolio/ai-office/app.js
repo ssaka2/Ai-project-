@@ -113,7 +113,7 @@ function renderBoard() {
 }
 $('task-form').onsubmit=async(e)=>{e.preventDefault(); const f=e.target; const b=f.querySelector('button'); b.disabled=true;try{await save('/api/tasks',{title:f.elements.title.value,brief:f.elements.brief.value,agent:Number(f.elements.agent.value),due:f.elements.due.value ? new Date(f.elements.due.value).toISOString() : null});f.reset();}catch(err){report(err.message,true);}finally{b.disabled=false;}};
 $('agent-form').onsubmit=async(e)=>{e.preventDefault();const f=e.target; const b=f.querySelector('button');b.disabled=true;try{await save('/api/agents',{id:f.elements.id.value ? Number(f.elements.id.value):null,name:f.elements.name.value,role:f.elements.role.value});f.reset();}catch(err){report(err.message,true);}finally{b.disabled=false;}};
-$('refresh').onclick=load; let searchTimer; $('search').oninput=()=>{clearTimeout(searchTimer);searchTimer=setTimeout(()=>{for(const key of Object.keys(limits)) limits[key]=PAGE_SIZE;renderBoard();},150);}; load();
+$('refresh').onclick=load; let searchTimer; $('search').oninput=()=>{clearTimeout(searchTimer);for(const key of Object.keys(limits)) limits[key]=PAGE_SIZE;searchTimer=setTimeout(renderBoard,150);}; load();
 
 $('project-filter').onchange=()=>{for(const key of Object.keys(limits)) limits[key]=PAGE_SIZE;renderBoard();};
 $('project-form').onsubmit=async(e)=>{e.preventDefault();const f=e.target,b=f.querySelector('button');b.disabled=true;try{await save('/api/job-project',{name:f.elements.name.value,candidate:f.elements.candidate.value ? Number(f.elements.candidate.value) : null});f.reset();}catch(err){report(err.message,true);}finally{b.disabled=false;}};
