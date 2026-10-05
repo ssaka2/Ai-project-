@@ -7,6 +7,7 @@ import re
 import unicodedata
 import recruiting
 import staff_chat
+import application_learning
 import sqlite3
 from contextlib import closing
 from datetime import datetime, timezone
@@ -119,6 +120,14 @@ class Office:
                 CREATE TABLE IF NOT EXISTS projects(
                     id INTEGER PRIMARY KEY, name TEXT NOT NULL UNIQUE COLLATE NOCASE,
                     kind TEXT NOT NULL, created TEXT NOT NULL);
+                CREATE TABLE IF NOT EXISTS rejection_reviews(
+                    id INTEGER PRIMARY KEY, check_id INTEGER NOT NULL UNIQUE REFERENCES application_checks(id),
+                    candidate INTEGER NOT NULL REFERENCES projects(id), owner INTEGER NOT NULL REFERENCES agents(id),
+                    basis TEXT NOT NULL, reason TEXT NOT NULL, corrective_action TEXT NOT NULL, created TEXT NOT NULL);
+                CREATE TABLE IF NOT EXISTS application_preflights(
+                    id INTEGER PRIMARY KEY, project INTEGER NOT NULL REFERENCES projects(id),
+                    review_revision INTEGER NOT NULL, owner INTEGER NOT NULL REFERENCES agents(id),
+                    evidence TEXT NOT NULL, created TEXT NOT NULL);
                 CREATE TABLE IF NOT EXISTS staff_chats(
                     id INTEGER PRIMARY KEY, candidate INTEGER NOT NULL REFERENCES projects(id),
                     agent INTEGER NOT NULL REFERENCES agents(id), project INTEGER REFERENCES projects(id),
@@ -202,6 +211,8 @@ class Office:
             db.execute('BEGIN')
             return {key: [dict(row) for row in db.execute(query)] for key, query in {
                 **recruiting.snapshot_queries(),
+                'rejection_reviews': 'SELECT * FROM rejection_reviews ORDER BY id DESC',
+                'application_preflights': 'SELECT * FROM application_preflights ORDER BY id DESC',
                 'chats': 'SELECT * FROM staff_chats ORDER BY id DESC',
                 'application_identities': 'SELECT * FROM application_identities ORDER BY project',
                 'checks': 'SELECT * FROM application_checks ORDER BY id DESC',
@@ -215,13 +226,15 @@ class Office:
     def mutate(self, action, data):
         if not isinstance(data, dict):
             raise ValueError('JSON object required')
-        for key in ('id','version','project','candidate','agent','revision'):
+        for key in ('id','version','project','candidate','agent','revision','check_id','owner','review_revision'):
             value = data.get(key)
             if type(value) is int and not 0 <= value <= 2**63-1:
                 raise ValueError(f'{key} is outside the supported integer range')
         with closing(self.connect()) as db, db:
             db.execute('BEGIN IMMEDIATE')
-            if action == 'staff-chat':
+            if action in ('rejection-review','application-preflight'):
+                task, message = None, application_learning.mutate(db,action,data,required,Conflict,utcnow)
+            elif action == 'staff-chat':
                 candidate, agent, project = data.get('candidate'), data.get('agent'), data.get('project')
                 question = data.get('question')
                 answer = staff_chat.reply(db,candidate,agent,question,project)
@@ -341,6 +354,8 @@ class Office:
                 status = data.get('status', row['status'])
                 if row['title']=='Submit and record the outcome' and row['project'] and status != 'queued':
                     require_identity(db, row['project'])
+                    if row['status']=='queued' and status=='active':
+                        application_learning.gate(db,row['project'])
                 allowed = {'queued': ('queued', 'active'), 'active': ('active', 'review'),
                            'review': ('review', 'active', 'done'), 'done': ('done', 'queued')}
                 if row['status'] == 'queued' and status == 'active':
@@ -436,7 +451,7 @@ def make_server(path, port=4521):
                 if self.path == '/api/discover':
                     recruiting.scan(office)
                     return self.send(200, office.snapshot())
-                action = {'/api/staff-chat': 'staff-chat', '/api/application-identity': 'application-identity', '/api/campaign': 'campaign', '/api/agents': 'agents', '/api/tasks': 'tasks', '/api/update': 'update', '/api/candidate-project': 'candidate-project', '/api/job-project': 'job-project', '/api/application-check': 'application-check'}.get(self.path)
+                action = {'/api/rejection-review': 'rejection-review', '/api/application-preflight': 'application-preflight', '/api/staff-chat': 'staff-chat', '/api/application-identity': 'application-identity', '/api/campaign': 'campaign', '/api/agents': 'agents', '/api/tasks': 'tasks', '/api/update': 'update', '/api/candidate-project': 'candidate-project', '/api/job-project': 'job-project', '/api/application-check': 'application-check'}.get(self.path)
                 if action is None:
                     return self.send(404, {'error': 'Not found'})
                 self.send(200, office.mutate(action, data))

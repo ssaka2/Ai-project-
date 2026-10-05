@@ -70,6 +70,7 @@ function render() {
   const due = state.tasks.filter(t => t.status === 'queued' && t.due && new Date(t.due) <= new Date()).length;
   for(const [label, count] of [['All tasks',state.tasks.length],['In progress',state.tasks.filter(t => t.status==='active').length],['Awaiting review',state.tasks.filter(t => t.status==='review').length],['Scheduled & ready',due]]) {const c=el('div',undefined,'stat'); c.append(el('strong',String(count)),el('span',label)); $('summary').append(c);}
   for(const [id,kind] of [['identity-project','job-application'],['identity-candidate','candidate-placement']]) {const select=$(id),choice=select.value;select.replaceChildren();const empty=el('option','Choose a record');empty.value='';select.append(empty);for(const p of state.projects || []) if(p.kind===kind){const o=el('option',p.name);o.value=p.id;select.append(o);}select.value=choice;}
+  renderLearning();
   renderChat();
   renderRecruiting();
   renderBoard(); $('events').replaceChildren();
@@ -190,3 +191,16 @@ function renderChatHistory() {
 $('chat-candidate').onchange=()=>{$('chat-project').value='';renderChatHistory();};
 $('chat-agent').onchange=renderChatHistory;
 $('chat-form').onsubmit=async(e)=>{e.preventDefault();const f=e.target,b=f.querySelector('button');b.disabled=true;try{await save('/api/staff-chat',{candidate:Number(f.elements.candidate.value),agent:Number(f.elements.agent.value),project:f.elements.project.value ? Number(f.elements.project.value) : null,question:f.elements.question.value});f.elements.question.value='';}catch(err){report(err.message,true);}finally{b.disabled=false;}};
+
+function renderLearning() {
+  const rejected=(state.checks || []).filter(c=>c.status==='rejected' && !(state.rejection_reviews || []).some(r=>r.check_id===c.id));
+  chatOptions('lesson-check',rejected.map(c=>({id:c.id,name:`Record #${c.id} · ${(state.projects || []).find(p=>p.id===c.project)?.name}`})),'Choose a rejection');
+  for(const id of ['lesson-owner','preflight-owner'])chatOptions(id,state.agents,'Choose staff owner');
+  chatOptions('preflight-project',(state.projects || []).filter(p=>p.kind==='job-application' && p.candidate),'Choose application');
+  $('lessons').replaceChildren();
+  for(const lesson of (state.rejection_reviews || []).slice(0,30)) {const d=el('details',undefined,'agent');d.append(el('summary',`Lesson #${lesson.id} · ${(state.projects || []).find(p=>p.id===lesson.candidate)?.name} · ${lesson.basis.replaceAll('_',' ')}`),el('p',`Owner: ${state.agents.find(a=>a.id===lesson.owner)?.name} · Rejection record #${lesson.check_id}`),el('p',lesson.reason),el('p',lesson.corrective_action));$('lessons').append(d);}
+  for(const check of (state.application_preflights || []).slice(0,10))$('lessons').append(el('p',`Corrective check #${check.id} · Application #${check.project} · Lessons through #${check.review_revision} · ${check.evidence}`));
+}
+$('lesson-form').onsubmit=async(e)=>{e.preventDefault();const f=e.target,b=f.querySelector('button');b.disabled=true;try{await save('/api/rejection-review',{check_id:Number(f.elements.check_id.value),owner:Number(f.elements.owner.value),basis:f.elements.basis.value,reason:f.elements.reason.value,corrective_action:f.elements.corrective_action.value});f.reset();}catch(err){report(err.message,true);}finally{b.disabled=false;}};
+$('preflight-project').onchange=()=>{const p=(state.projects || []).find(p=>String(p.id)===$('preflight-project').value);$('preflight-form').elements.review_revision.value=(state.rejection_reviews || []).find(r=>r.candidate===p?.candidate)?.id || 0;};
+$('preflight-form').onsubmit=async(e)=>{e.preventDefault();const f=e.target,b=f.querySelector('button');b.disabled=true;try{await save('/api/application-preflight',{project:Number(f.elements.project.value),owner:Number(f.elements.owner.value),review_revision:Number(f.elements.review_revision.value),evidence:f.elements.evidence.value});f.reset();}catch(err){report(err.message,true);}finally{b.disabled=false;}};

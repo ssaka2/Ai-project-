@@ -41,7 +41,7 @@ python -m unittest discover -s portfolio/ai-office -v
 node --check portfolio/ai-office/app.js
 ```
 
-Fifty-two automated service/HTTP tests cover the review lifecycle, persistence after reopening the database, competing edits, timezone normalization, scheduled starts, agent changes, validation, exports, cross-origin rejection, and static assets.
+Fifty-seven automated service/HTTP tests cover the review lifecycle, persistence after reopening the database, competing edits, timezone normalization, scheduled starts, agent changes, validation, exports, cross-origin rejection, and static assets.
 
 Optional real browser verification:
 
@@ -169,7 +169,7 @@ Tests verify unknown-status handling, evidence/timestamps, candidate and applica
 
 ## Reliability verification — October 5, 2026
 
-The expanded suite has 52 service/HTTP tests. Additional regression coverage checks extreme timestamp conversion, oversized/negative IDs, non-ASCII write tokens, deeply nested JSON recovery, malformed discovery input, stopped campaign scan metadata, atomic rollback after a malformed job, concurrent discovery exclusion, and rejected source redirects. Invalid requests return controlled errors instead of disconnecting the client. A paused campaign no longer updates its last-scan timestamp without a source request.
+The expanded suite has 57 service/HTTP tests. Additional regression coverage checks extreme timestamp conversion, oversized/negative IDs, non-ASCII write tokens, deeply nested JSON recovery, malformed discovery input, stopped campaign scan metadata, atomic rollback after a malformed job, concurrent discovery exclusion, and rejected source redirects. Invalid requests return controlled errors instead of disconnecting the client. A paused campaign no longer updates its last-scan timestamp without a source request.
 
 During a save, form controls and board navigation are disabled to prevent edits from being silently cleared when the response arrives. Older refresh responses cannot replace state from a newer save. Browser verification checks this lock and its release, literal rendering of HTML-like chat messages, and the existing candidate, application, duplicate protection, staff chat, persistence, and mobile flows. This is functional verification using synthetic candidate data and feed fixtures; no live applications or employer inbox checks are performed.
 
@@ -177,3 +177,12 @@ During a save, form controls and board navigation are disabled to prevent edits 
 ## Staff role audit
 
 All 30 built-in roles are covered by `test_roles.py`: assignment, reassignment, full review/completion lifecycle, persisted chat, and restart persistence. Both templates are checked stage by stage for the correct owner and dependency edges. Case-only team renames now reuse the same staff record and preserve customized instructions when new workflows are created. Chat explicitly reports the selected role’s open-task count, including zero, and staff cards identify manual execution. See [ROLE_AUDIT.md](ROLE_AUDIT.md) for each role’s scope and limits.
+
+
+## Rejection review and corrective checks
+
+See [STAFFING_PLAN.md](STAFFING_PLAN.md) for the full workflow, named responsibilities, current automation, and remaining integrations. The new panel records rejection reviews with a staff owner, reason basis (employer feedback, hypothesis, or unknown), source/reason, and corrective action. No reason is inferred automatically. Chat reports pending reviews and lesson counts.
+
+A candidate's latest rejected application observations require review before the next template submission task can start. After reviewing them, record a corrective check for the next application against all current lessons; a newer lesson invalidates the previous check. The server enforces this in the same write transaction as task start. It does not send an application, automatically edit the CV, or verify that a human followed the instructions. Existing active tasks and factual status observations are not blocked. Reviews/checks persist and are included in private exports.
+
+API: `POST /api/rejection-review` with integer `check_id`, integer staff `owner`, `basis`, required `reason`, and `corrective_action` (each up to 4000 characters). `POST /api/application-preflight` with integer `project`, integer `owner`, current maximum review ID for that candidate as `review_revision` (0 without lessons), and required `evidence` (up to 4000 characters). An application must have registered duplicate protection. Stale lesson revisions and duplicate reviews return 409. Both endpoints require the existing local token and origin checks. The UI shows up to 30 lessons and 10 checks; exports retain all records.

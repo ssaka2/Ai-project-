@@ -293,6 +293,11 @@ class HttpTests(unittest.TestCase):
         self.assertEqual(error.exception.code,400)
         self.assertEqual(self.get('/api/state')[1]['tasks'],[])
 
+    def test_learning_routes_validate_and_require_token(self):
+        for route in ('/api/rejection-review','/api/application-preflight'):
+            self.assertEqual(self.post(route,{}, {'X-Office-Token':''})[0],403)
+            self.assertEqual(self.post(route,{})[0],400)
+
     def test_staff_chat_http(self):
         _,state=self.post('/api/candidate-project',{'name':'Chat candidate','profile':'Synthetic'})
         data={'candidate':state['projects'][0]['id'],'agent':state['agents'][0]['id'],'question':'What is my status?'}

@@ -1,5 +1,6 @@
 """Read-only, record-grounded staff-role replies. No model or live staff impersonation."""
 import re
+import application_learning
 
 
 def reply(db, candidate, agent, question, project=None):
@@ -51,5 +52,8 @@ def reply(db, candidate, agent, question, project=None):
     if any(word in q for word in ('search','job','status','cv','resume')):
         counts=db.execute('SELECT outcome,COUNT(*) AS n FROM recruiting_jobs WHERE candidate=? GROUP BY outcome',(candidate,)).fetchall()
         lines.append('Discovery records: '+(', '.join(f"{r['outcome']}={r['n']}" for r in counts) or 'none')+'. These are not submission counts.')
+    outstanding=len(application_learning.pending(db,candidate))
+    lessons=db.execute('SELECT COUNT(*) FROM rejection_reviews WHERE candidate=?',(candidate,)).fetchone()[0]
+    lines.append(f'Rejection improvement: {outstanding} rejection observation(s) awaiting review; {lessons} recorded lesson(s). Fresh corrective checks are required before starting subsequent submission tasks. Reasons may be unknown or unconfirmed.')
     lines.append('Based on saved records at reply time; no live portal or inbox check was performed. Ask about status, next checks, blockers, CV tasks, or interviews. For a specific opening, select it above.')
     return '\n\n'.join(lines)
