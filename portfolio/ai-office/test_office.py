@@ -269,6 +269,12 @@ class HttpTests(unittest.TestCase):
         self.assertEqual(len(state['tasks']),12)
         self.assertEqual(self.post('/api/candidate-project',payload)[0],409)
 
+    def test_campaign_http_auth_and_validation(self):
+        self.assertEqual(self.post('/api/campaign',{}, {'X-Office-Token':''})[0],403)
+        self.assertEqual(self.post('/api/campaign',{})[0],400)
+        self.assertEqual(self.post('/api/discover',{}, {'X-Office-Token':''})[0],403)
+        self.assertEqual(self.post('/api/discover',{})[0],200)
+
     def test_project_http_route(self):
         code, state = self.post('/api/job-project', {'name':'HTTP opening'})
         self.assertEqual(code, 200)

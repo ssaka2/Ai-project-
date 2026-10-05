@@ -67,6 +67,7 @@ function render() {
   $('summary').replaceChildren();
   const due = state.tasks.filter(t => t.status === 'queued' && t.due && new Date(t.due) <= new Date()).length;
   for(const [label, count] of [['All tasks',state.tasks.length],['In progress',state.tasks.filter(t => t.status==='active').length],['Awaiting review',state.tasks.filter(t => t.status==='review').length],['Scheduled & ready',due]]) {const c=el('div',undefined,'stat'); c.append(el('strong',String(count)),el('span',label)); $('summary').append(c);}
+  renderRecruiting();
   renderBoard(); $('events').replaceChildren();
   for(const event of state.events) $('events').append(el('li', `${new Date(event.created).toLocaleString()} · ${event.task ? `Task #${event.task} · ` : ''}${event.message}`));
   if(!state.events.length) $('events').append(el('li','Your first action will appear here.'));
@@ -131,3 +132,35 @@ $('status-form').onsubmit=async(e)=>{
   try {await save('/api/application-check',{project:Number(f.elements.project.value),revision:Number(f.elements.revision.value),status:f.elements.status.value,evidence:f.elements.evidence.value,checked_at:new Date(f.elements.checked_at.value).toISOString(),next_check:f.elements.next_check.value ? new Date(f.elements.next_check.value).toISOString() : null});f.reset();}
   catch(err){report(err.message,true);}finally{b.disabled=false;}
 };
+
+function renderRecruiting() {
+  const select=$('campaign-candidate'), choice=select.value;
+  select.replaceChildren();const empty=el('option','Choose a candidate');empty.value='';select.append(empty);
+  for(const p of state.projects || []) if(p.kind==='candidate-placement') {const o=el('option',p.name);o.value=p.id;select.append(o);}
+  select.value=choice;
+  $('campaigns').replaceChildren();
+  for(const c of state.campaigns || []) {
+    const status=(state.checks || []).find(s=>s.project===c.candidate)?.status;
+    const stopped=['accepted','started','paused','withdrawn'].includes(status);
+    const row=el('div',undefined,'agent');row.append(el('strong',(state.projects || []).find(p=>p.id===c.candidate)?.name),el('p',`${c.enabled && !stopped ? 'Discovery enabled' : 'Discovery stopped'} · Last scan: ${c.last_run ? new Date(c.last_run).toLocaleString() : 'Pending'} · ${c.error || 'No recorded source error'}`));$('campaigns').append(row);
+  }
+  $('job-queue').replaceChildren();
+  const jobs=(state.job_queue || []).filter(j=>j.outcome!=='baseline');
+  for(const j of jobs.slice(0,50)) {
+    const row=el('details',undefined,'agent');row.append(el('summary',`${j.title} · ${j.location} · ${j.outcome}`),el('p',`Candidate: ${(state.projects || []).find(p=>p.id===j.candidate)?.name} · ${j.board} / ${j.job_id}`),el('p',j.reason),el('p',`Source: ${j.url}`),el('p',`First observed: ${new Date(j.first_seen).toLocaleString()}`));
+    const label=el('label','Prepared CV draft'),draft=el('textarea');draft.readOnly=true;draft.value=j.draft;label.append(draft);row.append(label);$('job-queue').append(row);
+  }
+  $('job-queue').append(el('p',`${jobs.length} new openings recorded; showing up to 50. Full records are included in the workspace export.`));
+}
+$('campaign-candidate').onchange=()=>{
+  const f=$('campaign-form'),c=(state.campaigns || []).find(c=>String(c.candidate)===f.elements.candidate.value);
+  f.elements.revision.value=c?.revision || 0;
+  for(const key of ['boards','titles','locations','skills']) f.elements[key].value=c ? JSON.parse(c[key]).join(', ') : '';
+  f.elements.resume.value=c?.resume || '';f.elements.enabled.checked=Boolean(c?.enabled);f.elements.consent.checked=false;
+};
+$('campaign-form').onsubmit=async(e)=>{
+  e.preventDefault();const f=e.target,b=f.querySelector('button');b.disabled=true;
+  try {const data={candidate:Number(f.elements.candidate.value),revision:Number(f.elements.revision.value),enabled:f.elements.enabled.checked,consent:f.elements.consent.checked};for(const key of ['boards','titles','locations','skills','resume']) data[key]=f.elements[key].value;await save('/api/campaign',data);$('campaign-candidate').onchange();}
+  catch(err){report(err.message,true);}finally{b.disabled=false;}
+};
+$('discover').onclick=async()=>{const b=$('discover');b.disabled=true;try{await save('/api/discover',{});}catch(err){report(err.message,true);}finally{b.disabled=false;}};

@@ -18,7 +18,7 @@ Open http://127.0.0.1:4521 on the same computer. On Windows, `py` can replace `p
 4. Review the result, then approve completion or send it back for revision.
 5. Search the board or export the workspace as JSON.
 
-Agents are **roles for manual planning**, not autonomous AI processes. You perform the work and paste results into the board. No model generation, external tools, or background execution is connected. Scheduling controls when a task can be started; it does not run a task automatically. Refresh to update scheduled availability. Times are entered in the browser's local timezone and stored in UTC.
+Agents are **roles for manual planning**, not autonomous AI processes. You perform the work and paste results into the board. No model generation or external submission is connected. Configured Greenhouse discovery runs in the background when launched with the command above. Scheduling controls when a task can be started; it does not run a task automatically. Refresh to update scheduled availability. Times are entered in the browser's local timezone and stored in UTC.
 
 ## Included
 
@@ -41,7 +41,7 @@ python -m unittest discover -s portfolio/ai-office -v
 node --check portfolio/ai-office/app.js
 ```
 
-Twenty-two automated service/HTTP tests cover the review lifecycle, persistence after reopening the database, competing edits, timezone normalization, scheduled starts, agent changes, validation, exports, cross-origin rejection, and static assets.
+Thirty-one automated service/HTTP tests cover the review lifecycle, persistence after reopening the database, competing edits, timezone normalization, scheduled starts, agent changes, validation, exports, cross-origin rejection, and static assets.
 
 Optional real browser verification:
 
@@ -73,7 +73,7 @@ One Submission Team owns both applying and status checking. The Follow-up Team r
 
 The server enforces these prerequisites. Reopening an input is blocked if dependent work has already started; reopen dependent tasks in reverse order first. Duplicate project names are rejected case-insensitively. Task completion, reassignment, notes, and project history survive restart.
 
-**Execution boundary:** these are working coordination tools for manual tasks, not autonomous workers. There are no job-portal feeds, model calls, CV parsing/generation, or external submission integrations. The workspace never submits an application or sends a message. Team instructions require actual evidence; the software cannot independently verify a pasted receipt or applicant approval. Leave blocked tasks open. Only mark submitted after completing the application on the real portal. Add your master CV and preferences locally; do not commit personal application data to the public repository.
+**Execution boundary:** these are working coordination tools for manual tasks, not autonomous workers. Configured Greenhouse feeds and exact-CV-excerpt draft preparation are available below; model calls, document parsing, and external submission integrations are not connected. The workspace never submits an application or sends a message. Team instructions require actual evidence; the software cannot independently verify a pasted receipt or applicant approval. Leave blocked tasks open. Only mark submitted after completing the application on the real portal. Add your master CV and preferences locally; do not commit personal application data to the public repository.
 
 ## Application status desk
 
@@ -85,7 +85,7 @@ Evidence is entered by the local user and is not independently verified. Use Unk
 
 ### Plugin integration boundary
 
-ChatGPT-connected plugins are available to the assistant in the conversation; they are not automatically installed, authenticated, or callable by this standalone Python application. GitHub is used for code and CI. Outlook Email could support reading receipts/status messages after connection; a document provider could supply the approved master CV. Those runtime integrations, credential handling, job feeds, and model execution are not implemented here. No plugin credentials or personal application records are committed to this public repository. Application teams and placement staff coordinate the workflow; adding roles does not connect external services.
+ChatGPT-connected plugins are available to the assistant in the conversation; they are not automatically installed, authenticated, or callable by this standalone Python application. GitHub is used for code and CI. Outlook Email could support reading receipts/status messages after connection; a document provider could supply the approved master CV. Authenticated runtime integrations, credential handling, and model execution are not implemented here; public Greenhouse discovery is supported. No plugin credentials or personal application records are committed to this public repository. Application teams and placement staff coordinate the workflow; adding roles does not connect external services.
 
 ## API
 
@@ -103,7 +103,7 @@ POST requests require JSON and the `X-Office-Token` from `/api/state`. Stale ver
 
 ## Limits
 
-Designed for one trusted local user. No accounts, TLS, public hosting, auto-refresh, task deletion, recurring schedules, model integration, or independent approver identity. Do not expose the server publicly or tunnel it to the internet. Search, board refresh, pagination, and unrelated saves preserve pending notes and assignments in memory. Reloading/closing the browser loses unsaved edits. Stale drafts retain their original version and cannot overwrite a newer task; copy their contents before using Discard local edits. The API still transfers a full task snapshot, so this is not a server-paginated solution for very large datasets. Agent edits use last-write-wins; task results use version checks. The standard-library HTTP server is for local development, not production hosting.
+Designed for one trusted local user. No accounts, TLS, public hosting, auto-refresh, task deletion, recurring task execution, model integration, or independent approver identity. Do not expose the server publicly or tunnel it to the internet. Search, board refresh, pagination, and unrelated saves preserve pending notes and assignments in memory. Reloading/closing the browser loses unsaved edits. Stale drafts retain their original version and cannot overwrite a newer task; copy their contents before using Discard local edits. The API still transfers a full task snapshot, so this is not a server-paginated solution for very large datasets. Agent edits use last-write-wins; task results use version checks. The standard-library HTTP server is for local development, not production hosting.
 
 
 ## US software candidate placement office
@@ -118,4 +118,24 @@ Select the candidate in the status desk to record intake, preparing, searching, 
 
 API: `POST /api/candidate-project` accepts unique `name` and required `profile` (1–5000 characters). `POST /api/job-project` additionally accepts an optional integer `candidate` identifying a placement case. `/api/application-check` validates statuses against the project kind. Candidate notes and links persist in SQLite and JSON exports. Keep personal documents private and reference them locally; never commit candidate data to GitHub.
 
-This release provides a working manual recruiting coordination system. It does not guarantee employment or automatically search all portals, write CVs, submit applications, contact employers, arrange interviews, or run background staff. Those require authenticated runtime integrations and actual candidate information. Browser verification covers creating a candidate, linking an opening, saving placement status, and reload persistence; service tests cover all twelve handoffs, validation, atomic rollback, API access checks, and preservation of linked cases.
+This release provides a working manual recruiting coordination system. It does not guarantee employment or automatically search all portals, submit applications, contact employers, or arrange interviews. The configured discovery worker and CV excerpt preparation described below are automated. Those require authenticated runtime integrations and actual candidate information. Browser verification covers creating a candidate, linking an opening, saving placement status, and reload persistence; service tests cover all twelve handoffs, validation, atomic rollback, API access checks, and preservation of linked cases.
+
+
+## Recurring new-job discovery and CV preparation
+
+1. Create a candidate case, then select it under **New-job recruiting campaign**.
+2. Enter up to five employer Greenhouse board tokens (from their careers board URLs), target titles, approved US location phrases, verified skills, and an accurate plain-text master CV. Confirm candidate authorization and enable discovery.
+3. Keep `python portfolio/ai-office/office.py` running. It checks due campaigns every 30 seconds, with a 15-minute interval between scans. **Check due boards now** runs due scans without bypassing this interval. Refresh the UI to see background results.
+4. The first successful scan of each board records existing openings as a baseline. Only unseen job-post IDs from later scans produce queue entries. A failed first scan never establishes a baseline. Repeated scans do not duplicate a candidate/board/job ID.
+5. Each new opening receives a draft containing relevant **exact CV excerpts and the complete unchanged master CV**, then a title/location/skill keyword screen. This is deterministic preparation, not AI rewriting or a finished ATS-optimized CV. Full employer requirements, authorization/sponsorship, seniority, salary, and application questions still require review.
+6. Matching entries are **Blocked**, explaining the missing submission connector and review requirements. Filtered entries show reasons and remain available for inspection. No entry is marked applied and no message or application is sent. Copy an approved draft into a linked application workflow to complete the existing submission/status process.
+
+**New means newly observed since baseline**, not a verified posting date. The public provider returns an update date rather than a reliable original posting date; an old opening newly added to a board can appear. Edits to an existing ID do not trigger another package. Deduplication is per candidate, board, and post ID, not semantic deduplication across employer boards or reposted IDs. These are stored snapshots: verify the opening is still available before acting. Only configured employers are covered, not all job sites. Location matching is literal; use specific US phrases and review ambiguous remote listings. A keyword match does not establish eligibility.
+
+An **interviewing** candidate continues discovery. Recording **accepted, started, paused, or withdrawn** stops discovery for that candidate. Disabling the campaign also stops it. Resume by updating the candidate status and enabling the campaign; the next due cycle resumes. Acceptance stops new searching to avoid unwanted applications while onboarding, but does not mark the candidate placed. Completed tasks never control campaign status automatically.
+
+Saving changed preferences invalidates existing blocked packages as **Needs review**; their original drafts remain for audit and are not silently overwritten. Previously filtered jobs are not automatically reconsidered. Optimistic campaign revisions prevent stale edits; changes during a network request discard that request's results. Source failures are recorded and retried next cycle. Network reads use a fixed HTTPS provider, validated board tokens, disabled redirects, timeouts, and a response-size limit. No credentials are required for public reads or stored by this feature.
+
+API additions: `POST /api/campaign` accepts integer `candidate`, current integer `revision` (0 initially), comma-separated `boards`, `titles`, `locations`, `skills`, plain-text `resume`, boolean `enabled`, and `consent: true`. `POST /api/discover` checks due campaigns. Both use the existing local token/origin protection. Snapshots/exports now include campaigns and job records, including private CV text; keep exports private. The queue shows the newest 50 non-baseline records; exports include all records. The CLI starts the worker; importing `make_server` alone does not start background scans.
+
+Provider reference: https://docs.greenhouse.io/job-board.html. Public job-list reads are unauthenticated. Application submission requires an employer Job Board API key and job-specific form validation; GitHub access does not provide that authorization. No automatic submission or email/status-monitoring connector is included. Tests use provider fixtures; they do not claim a real employer submission or guaranteed provider availability.

@@ -2,6 +2,8 @@
 import argparse
 import json
 import secrets
+import threading
+import recruiting
 import sqlite3
 from contextlib import closing
 from datetime import datetime, timezone
@@ -134,6 +136,7 @@ class Office:
                     id INTEGER PRIMARY KEY, task INTEGER REFERENCES tasks(id),
                     message TEXT NOT NULL, created TEXT NOT NULL);
             ''')
+            recruiting.initialize(db)
             if 'project' not in [r['name'] for r in db.execute('PRAGMA table_info(tasks)')]:
                 db.execute('ALTER TABLE tasks ADD COLUMN project INTEGER REFERENCES projects(id)')
             if 'candidate' not in [r['name'] for r in db.execute('PRAGMA table_info(projects)')]:
@@ -185,6 +188,7 @@ class Office:
             # One read transaction gives export and UI a consistent snapshot.
             db.execute('BEGIN')
             return {key: [dict(row) for row in db.execute(query)] for key, query in {
+                **recruiting.snapshot_queries(),
                 'checks': 'SELECT * FROM application_checks ORDER BY id DESC',
                 'projects': 'SELECT * FROM projects ORDER BY id DESC',
                 'dependencies': 'SELECT * FROM dependencies ORDER BY task, prerequisite',
@@ -198,7 +202,10 @@ class Office:
             raise ValueError('JSON object required')
         with closing(self.connect()) as db, db:
             db.execute('BEGIN IMMEDIATE')
-            if action in ('job-project', 'candidate-project'):
+            if action == 'campaign':
+                recruiting.configure(db, data, Conflict)
+                task, message = None, 'Recruiting campaign preferences saved'
+            elif action in ('job-project', 'candidate-project'):
                 name = required(data, 'name', 120)
                 if db.execute('SELECT 1 FROM projects WHERE name=? COLLATE NOCASE', (name,)).fetchone():
                     raise Conflict('A project with this name already exists. Choose a unique application name.')
@@ -365,7 +372,10 @@ def make_server(path, port=4521):
                 if self.headers.get('Content-Type', '').split(';')[0] != 'application/json':
                     raise ValueError('Use application/json')
                 data = json.loads(self.rfile.read(length))
-                action = {'/api/agents': 'agents', '/api/tasks': 'tasks', '/api/update': 'update', '/api/candidate-project': 'candidate-project', '/api/job-project': 'job-project', '/api/application-check': 'application-check'}.get(self.path)
+                if self.path == '/api/discover':
+                    recruiting.scan(office)
+                    return self.send(200, office.snapshot())
+                action = {'/api/campaign': 'campaign', '/api/agents': 'agents', '/api/tasks': 'tasks', '/api/update': 'update', '/api/candidate-project': 'candidate-project', '/api/job-project': 'job-project', '/api/application-check': 'application-check'}.get(self.path)
                 if action is None:
                     return self.send(404, {'error': 'Not found'})
                 self.send(200, office.mutate(action, data))
@@ -385,10 +395,15 @@ if __name__ == '__main__':
     parser.add_argument('--port', default=4521, type=int)
     args = parser.parse_args()
     server = make_server(args.db, args.port)
+    stop = threading.Event()
+    watcher = threading.Thread(target=recruiting.worker, args=(Office(args.db), stop), daemon=True)
+    watcher.start()
     print(f'AI Office: http://127.0.0.1:{server.server_port}', flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
         pass
     finally:
+        stop.set()
         server.server_close()
+        watcher.join(timeout=1)
