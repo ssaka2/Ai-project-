@@ -41,7 +41,7 @@ python -m unittest discover -s portfolio/ai-office -v
 node --check portfolio/ai-office/app.js
 ```
 
-Nineteen automated service/HTTP tests cover the review lifecycle, persistence after reopening the database, competing edits, timezone normalization, scheduled starts, agent changes, validation, exports, cross-origin rejection, and static assets.
+Twenty-two automated service/HTTP tests cover the review lifecycle, persistence after reopening the database, competing edits, timezone normalization, scheduled starts, agent changes, validation, exports, cross-origin rejection, and static assets.
 
 Optional real browser verification:
 
@@ -85,7 +85,7 @@ Evidence is entered by the local user and is not independently verified. Use Unk
 
 ### Plugin integration boundary
 
-ChatGPT-connected plugins are available to the assistant in the conversation; they are not automatically installed, authenticated, or callable by this standalone Python application. GitHub is used for code and CI. Outlook Email could support reading receipts/status messages after connection; a document provider could supply the approved master CV. Those runtime integrations, credential handling, job feeds, and model execution are not implemented here. No plugin credentials or personal application records are committed to this public repository. The existing eight teams are sufficient for this workflow; adding more names does not connect external services.
+ChatGPT-connected plugins are available to the assistant in the conversation; they are not automatically installed, authenticated, or callable by this standalone Python application. GitHub is used for code and CI. Outlook Email could support reading receipts/status messages after connection; a document provider could supply the approved master CV. Those runtime integrations, credential handling, job feeds, and model execution are not implemented here. No plugin credentials or personal application records are committed to this public repository. Application teams and placement staff coordinate the workflow; adding roles does not connect external services.
 
 ## API
 
@@ -104,3 +104,18 @@ POST requests require JSON and the `X-Office-Token` from `/api/state`. Stale ver
 ## Limits
 
 Designed for one trusted local user. No accounts, TLS, public hosting, auto-refresh, task deletion, recurring schedules, model integration, or independent approver identity. Do not expose the server publicly or tunnel it to the internet. Search, board refresh, pagination, and unrelated saves preserve pending notes and assignments in memory. Reloading/closing the browser loses unsaved edits. Stale drafts retain their original version and cannot overwrite a newer task; copy their contents before using Discard local edits. The API still transfers a full task snapshot, so this is not a server-paginated solution for very large datasets. Agent edits use last-write-wins; task results use version checks. The standard-library HTTP server is for local development, not production hosting.
+
+
+## US software candidate placement office
+
+Create a **Candidate case** with an alias and verified intake notes. This adds twelve placement roles and twelve prerequisite-gated tasks: intake, US location preferences, employer requirement mapping, profile/portfolio preparation, skills planning, linked application pipeline, campaign review, interviews, written offer review, candidate offer decision, onboarding/actual start, and post-start support. Matching existing staff are reused without overwriting their instructions. Existing application projects remain intact.
+
+Record candidate-approved US locations, remote/hybrid/onsite and relocation preferences; nationwide coverage is a preference to confirm, not an automatically searched feed. Each employer's requirements must be checked against verified candidate facts. Unknown authorization, sponsorship, qualifications, and availability require clarification. Team roles can be edited and tasks reassigned for each employer's needs.
+
+When creating each application, select its **Candidate case**. Separate application workflows retain CV tailoring, QA, approval, submission receipts, and status history. A candidate can have multiple linked openings. The manager sees linked application counts and handoff progress. Continue adding openings and recording next actions after rejections; the candidate case spans the whole campaign. Intake corrections can be recorded in task notes, subject to existing review/version gates.
+
+Select the candidate in the status desk to record intake, preparing, searching, interviewing, offer received, accepted, started, paused, withdrawn, or blocked. **Accepted and Started are separate states.** Started evidence must describe the employer, role, actual start date, and candidate confirmation. Evidence is manually entered, not independently verified. Completing every task never automatically marks a person placed. Append a new status record when circumstances change; earlier records remain in the history.
+
+API: `POST /api/candidate-project` accepts unique `name` and required `profile` (1–5000 characters). `POST /api/job-project` additionally accepts an optional integer `candidate` identifying a placement case. `/api/application-check` validates statuses against the project kind. Candidate notes and links persist in SQLite and JSON exports. Keep personal documents private and reference them locally; never commit candidate data to GitHub.
+
+This release provides a working manual recruiting coordination system. It does not guarantee employment or automatically search all portals, write CVs, submit applications, contact employers, arrange interviews, or run background staff. Those require authenticated runtime integrations and actual candidate information. Browser verification covers creating a candidate, linking an opening, saving placement status, and reload persistence; service tests cover all twelve handoffs, validation, atomic rollback, API access checks, and preservation of linked cases.

@@ -33,10 +33,12 @@ function render() {
   $('projects').replaceChildren();
   for(const project of state.projects || []) {
     const option=el('option',project.name);option.value=project.id;$('project-filter').append(option);
-    const statusOption=el('option',project.name);statusOption.value=project.id;$('status-project').append(statusOption);
+    const statusOption=el('option',`${project.kind==='candidate-placement' ? 'Candidate: ' : ''}${project.name}`);statusOption.value=project.id;$('status-project').append(statusOption);
     const tasks=state.tasks.filter(t=>t.project===project.id), completed=tasks.filter(t=>t.status==='done').length;
     const ready=tasks.filter(t=>t.status==='queued' && !(prerequisites.get(t.id)||[]).some(id=>taskById.get(id)?.status!=='done'));
     const line=el('div',undefined,'agent');line.append(el('strong',project.name),el('p',`${completed}/${tasks.length} completed · ${ready.length} ready for handoff`));
+    if(project.kind==='candidate-placement') line.append(el('p',`Candidate case · ${(state.projects || []).filter(p=>p.candidate===project.id).length} linked applications · Task completion does not confirm placement`));
+    if(project.candidate) line.append(el('p',`Candidate: ${(state.projects || []).find(p=>p.id===project.candidate)?.name || project.candidate}`));
     const check=(state.checks || []).find(c=>c.project===project.id);
     if(check) {
       line.append(el('p',`Recorded status: ${check.status.replaceAll('_',' ')} · Checked: ${new Date(check.checked_at).toLocaleString()}`));
@@ -49,6 +51,9 @@ function render() {
   }
   if((state.projects || []).some(p=>String(p.id)===statusSelection)) $('status-project').value=statusSelection;
   if((state.projects || []).some(p=>String(p.id)===projectSelection)) $('project-filter').value=projectSelection;
+  const linked=$('candidate-link').value; $('candidate-link').replaceChildren();const standalone=el('option','Standalone application');standalone.value='';$('candidate-link').append(standalone);
+  for(const p of state.projects || []) if(p.kind==='candidate-placement') {const o=el('option',p.name);o.value=p.id;$('candidate-link').append(o);}
+  $('candidate-link').value=linked;
   agentById = new Map(state.agents.map(a => [a.id, a]));
   workload = new Map(state.agents.map(a => [a.id, 0]));
   for(const task of state.tasks) if(task.status !== 'done') workload.set(task.agent, (workload.get(task.agent) || 0) + 1);
@@ -107,12 +112,17 @@ $('agent-form').onsubmit=async(e)=>{e.preventDefault();const f=e.target; const b
 $('refresh').onclick=load; let searchTimer; $('search').oninput=()=>{clearTimeout(searchTimer);searchTimer=setTimeout(()=>{for(const key of Object.keys(limits)) limits[key]=PAGE_SIZE;renderBoard();},150);}; load();
 
 $('project-filter').onchange=()=>{for(const key of Object.keys(limits)) limits[key]=PAGE_SIZE;renderBoard();};
-$('project-form').onsubmit=async(e)=>{e.preventDefault();const f=e.target,b=f.querySelector('button');b.disabled=true;try{await save('/api/job-project',{name:f.elements.name.value});f.reset();}catch(err){report(err.message,true);}finally{b.disabled=false;}};
+$('project-form').onsubmit=async(e)=>{e.preventDefault();const f=e.target,b=f.querySelector('button');b.disabled=true;try{await save('/api/job-project',{name:f.elements.name.value,candidate:f.elements.candidate.value ? Number(f.elements.candidate.value) : null});f.reset();}catch(err){report(err.message,true);}finally{b.disabled=false;}};
+
+$('candidate-form').onsubmit=async(e)=>{e.preventDefault();const f=e.target,b=f.querySelector('button');b.disabled=true;try{await save('/api/candidate-project',{name:f.elements.name.value,profile:f.elements.profile.value});f.reset();}catch(err){report(err.message,true);}finally{b.disabled=false;}};
 
 function localTime(value) {const d=new Date(value);return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,19);}
 $('status-project').onchange=()=>{
   const f=$('status-form'), check=(state.checks || []).find(c=>String(c.project)===f.elements.project.value);
-  f.elements.revision.value=check?.id || 0;f.elements.status.value=check?.status || 'unknown';
+  const placement=(state.projects || []).find(p=>String(p.id)===f.elements.project.value)?.kind==='candidate-placement';
+  const states=placement ? ['intake','preparing','searching','interviewing','offer_received','accepted','started','paused','withdrawn','blocked'] : ['unknown','not_applied','submitted','under_review','interview','offer','rejected','withdrawn','blocked'];
+  f.elements.status.replaceChildren(...states.map(value=>{const o=el('option',value.replaceAll('_',' '));o.value=value;return o;}));
+  f.elements.revision.value=check?.id || 0;f.elements.status.value=check?.status || (placement ? 'intake' : 'unknown');
   f.elements.evidence.value=check?.evidence || '';f.elements.checked_at.value=localTime(new Date());
   f.elements.next_check.value=check?.next_check ? localTime(check.next_check) : '';
 };

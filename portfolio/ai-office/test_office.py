@@ -28,6 +28,36 @@ class OfficeTests(unittest.TestCase):
         self.task = self.office.mutate('update', payload)['tasks'][0]
         return self.task
 
+    def test_candidate_case_and_linked_applications(self):
+        state = self.office.mutate('candidate-project', {'name':'Synthetic candidate', 'profile':'Test only: software roles; location preferences pending.'})
+        case = state['projects'][0]['id']
+        tasks = sorted((t for t in state['tasks'] if t['project']==case), key=lambda t:t['id'])
+        self.assertEqual(len(tasks),12)
+        self.assertIn('location preferences pending', tasks[0]['brief'])
+        with self.assertRaises(ValueError):
+            self.office.mutate('update', {'id':tasks[1]['id'],'version':1,'status':'active'})
+        for task in tasks:
+            for version,status in enumerate(('active','review','done'),1):
+                self.office.mutate('update', {'id':task['id'],'version':version,'status':status,'result':'Synthetic workflow test evidence'})
+        self.assertEqual(self.office.snapshot()['checks'], [])
+        state = self.office.mutate('job-project', {'name':'Linked opening','candidate':case})
+        self.assertEqual(state['projects'][0]['candidate'],case)
+        self.assertEqual(app.Office(self.path).snapshot()['projects'][0]['candidate'],case)
+        payload = {'project':case,'revision':0,'status':'searching','evidence':'Synthetic candidate-approved search','checked_at':'2026-01-01T00:00:00Z'}
+        self.office.mutate('application-check',payload)
+        with self.assertRaises(ValueError):
+            self.office.mutate('application-check',{**payload,'revision':1,'status':'submitted'})
+        with self.assertRaises(ValueError):
+            self.office.mutate('job-project',{'name':'Bad link','candidate':state['projects'][0]['id']})
+        self.assertEqual(len(self.office.snapshot()['projects']),2)
+
+    def test_candidate_validation_is_atomic(self):
+        before = self.office.snapshot()
+        for profile in ('',None,'x'*5001):
+            with self.assertRaises(ValueError):
+                self.office.mutate('candidate-project', {'name':'Invalid','profile':profile})
+        self.assertEqual(self.office.snapshot(),before)
+
     def test_review_lifecycle_and_restart(self):
         self.update(status='active')
         with self.assertRaises(ValueError): self.update(status='review')
@@ -229,6 +259,15 @@ class HttpTests(unittest.TestCase):
         self.assertEqual(self.post('/api/application-check',payload)[0],200)
         self.assertEqual(self.post('/api/application-check',payload)[0],409)
         self.assertEqual(self.get('/api/export')[1]['checks'][0]['status'],'blocked')
+
+    def test_candidate_http_route(self):
+        payload={'name':'HTTP candidate','profile':'Synthetic intake notes'}
+        self.assertEqual(self.post('/api/candidate-project',payload,{'X-Office-Token':''})[0],403)
+        code,state=self.post('/api/candidate-project',payload)
+        self.assertEqual(code,200)
+        self.assertEqual(state['projects'][0]['kind'],'candidate-placement')
+        self.assertEqual(len(state['tasks']),12)
+        self.assertEqual(self.post('/api/candidate-project',payload)[0],409)
 
     def test_project_http_route(self):
         code, state = self.post('/api/job-project', {'name':'HTTP opening'})

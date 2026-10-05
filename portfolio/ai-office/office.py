@@ -48,6 +48,37 @@ JOB_STAGES = (
 )
 
 
+PLACEMENT_STATES = ('intake', 'preparing', 'searching', 'interviewing', 'offer_received', 'accepted', 'started', 'paused', 'withdrawn', 'blocked')
+PLACEMENT_TEAMS = (
+    ('Placement Manager', 'Own the candidate case, weekly review, blockers, and evidence through confirmed job start.'),
+    ('Candidate Intake Team', 'Record candidate consent, verified profile, goals, and missing facts; minimize private data.'),
+    ('US Location Coordinator', 'Record candidate-approved US states/cities, remote/hybrid/onsite preferences, relocation, and time zones.'),
+    ('Employer Requirements Team', 'Compare each employer requirement with verified skills, experience, location, and candidate-stated work authorization; ask about unknowns.'),
+    ('Profile and Portfolio Team', 'Prepare an accurate master CV, portfolio, and professional profile with candidate approval.'),
+    ('Skills Development Team', 'Identify gaps against target roles and coordinate practical learning without inventing qualifications.'),
+    ('Job Discovery Team', JOB_TEAMS[1][1]),
+    ('Submission Team', JOB_TEAMS[6][1]),
+    ('Interview Coaching Team', 'Coordinate interview schedules, technical practice, accommodations requested by the candidate, and feedback.'),
+    ('Offer Coordination Team', 'Record written offer terms and questions; obtain the candidate decision before any acceptance.'),
+    ('Onboarding Team', 'Track employer onboarding requirements, agreed start date, and candidate-confirmed actual start.'),
+    ('Candidate Success Team', 'Check post-start experience and reopen support when needed; never guarantee employment.'),
+)
+PLACEMENT_STAGES = (
+    (1, 'Complete candidate intake', 'Record consent, verified CV reference, target software roles, experience, availability, and missing facts. Do not store passwords, identity documents, or invented credentials.', ()),
+    (2, 'Confirm US location preferences', 'Cover any candidate-approved US location. Record states/cities, remote/hybrid/onsite, relocation, time zones, compensation preferences, and candidate-stated work authorization/sponsorship needs. Nationwide is an option, not assumed consent.', (0,)),
+    (3, 'Map employer requirements', 'Compare target software role descriptions with verified candidate facts. Record must-haves, gaps, and questions. Review every opening separately; do not infer eligibility from demographic traits.', (0,1)),
+    (4, 'Prepare the candidate profile', 'Record approved master CV, portfolio/GitHub, professional profile, and factual achievement inventory. Keep private files local; record document references.', (2,)),
+    (5, 'Prepare the skills and interview plan', 'Set practical learning and interview goals for verified gaps. Record practice evidence and role readiness; never represent training as employment.', (2,)),
+    (6, 'Build the linked application pipeline', 'Create a linked application workflow for each verified opening using this candidate case. Record source URLs, requirements, dates, and duplicates. Each opening receives its own tailoring, QA, approval, submission, and status checks.', (3,4)),
+    (7, 'Review the active application campaign', 'Review linked applications and actual receipts with the manager. Record next checks and blockers. Continue adding appropriate openings while awaiting responses; no automatic submission is connected.', (5,)),
+    (8, 'Coordinate interviews and feedback', 'Record actual invitations, candidate-approved schedules, technical preparation, outcomes, and next actions. Keep the campaign active after rejection; do not fabricate interviews.', (6,)),
+    (9, 'Review a written offer with the candidate', 'Record actual employer, role, location, compensation, conditions, start proposal, offer reference, and candidate questions. Leave open if no written offer exists.', (7,)),
+    (0, 'Record the candidate offer decision', 'Record the candidate explicit decision and evidence. Acceptance is never automatic. A declined or withdrawn offer returns the campaign to searching; keep this task open until an accepted offer is confirmed.', (8,)),
+    (10, 'Coordinate onboarding and confirm job start', 'Track employer-required onboarding through secure employer channels. Record employer, role, actual start date, and candidate confirmation only after work begins. An accepted offer is not a completed placement.', (9,)),
+    (11, 'Follow up after the confirmed start', 'Record the candidate check-in, concerns, and agreed follow-up. Record Started in the status desk only with actual start evidence. Reopen support or the search if needed.', (10,)),
+)
+
+
 def utcnow():
     return datetime.now(timezone.utc).isoformat()
 
@@ -105,6 +136,8 @@ class Office:
             ''')
             if 'project' not in [r['name'] for r in db.execute('PRAGMA table_info(tasks)')]:
                 db.execute('ALTER TABLE tasks ADD COLUMN project INTEGER REFERENCES projects(id)')
+            if 'candidate' not in [r['name'] for r in db.execute('PRAGMA table_info(projects)')]:
+                db.execute('ALTER TABLE projects ADD COLUMN candidate INTEGER REFERENCES projects(id)')
             db.execute('CREATE INDEX IF NOT EXISTS tasks_project ON tasks(project)')
             if not db.execute('SELECT 1 FROM agents').fetchone():
                 db.executemany('INSERT INTO agents(name,role) VALUES (?,?)', [
@@ -165,36 +198,44 @@ class Office:
             raise ValueError('JSON object required')
         with closing(self.connect()) as db, db:
             db.execute('BEGIN IMMEDIATE')
-            if action == 'job-project':
+            if action in ('job-project', 'candidate-project'):
                 name = required(data, 'name', 120)
                 if db.execute('SELECT 1 FROM projects WHERE name=? COLLATE NOCASE', (name,)).fetchone():
                     raise Conflict('A project with this name already exists. Choose a unique application name.')
-                project = db.execute('INSERT INTO projects(name,kind,created) VALUES (?,?,?)',
-                                     (name, 'job-application', utcnow())).lastrowid
+                placement = action == 'candidate-project'
+                candidate = data.get('candidate')
+                if candidate is not None and (placement or type(candidate) is not int or not db.execute("SELECT 1 FROM projects WHERE id=? AND kind='candidate-placement'", (candidate,)).fetchone()):
+                    raise ValueError('Choose an existing candidate placement case')
+                profile = required(data, 'profile', 5000) if placement else ''
+                project = db.execute('INSERT INTO projects(name,kind,created,candidate) VALUES (?,?,?,?)',
+                                     (name, 'candidate-placement' if placement else 'job-application', utcnow(), candidate)).lastrowid
                 # Reuse teams by name without overwriting customized instructions.
                 teams = []
-                for team, role in JOB_TEAMS:
+                for team, role in (PLACEMENT_TEAMS if placement else JOB_TEAMS):
                     row = db.execute('SELECT id FROM agents WHERE name=? ORDER BY id LIMIT 1', (team,)).fetchone()
                     teams.append(row['id'] if row else db.execute('INSERT INTO agents(name,role) VALUES (?,?)', (team, role)).lastrowid)
                 tasks = []
-                for team, title, brief, parents in JOB_STAGES:
+                for team, title, brief, parents in (PLACEMENT_STAGES if placement else JOB_STAGES):
+                    if placement and not tasks:
+                        brief += '\nCandidate-provided intake notes:\n' + profile
                     task = db.execute('INSERT INTO tasks(title,brief,agent,project,created) VALUES (?,?,?,?,?)',
                                       (title, brief, teams[team], project, utcnow())).lastrowid
                     tasks.append(task)
                     db.executemany('INSERT INTO dependencies(task,prerequisite) VALUES (?,?)', [(task,tasks[parent]) for parent in parents])
                     db.execute('INSERT INTO events(task,message,created) VALUES (?,?,?)', (task, 'Application workflow task created', utcnow()))
-                task, message = None, f'Job application project created: {name}'
+                task, message = None, f'{"Candidate placement" if placement else "Job application"} project created: {name}'
             elif action == 'application-check':
                 project, revision = data.get('project'), data.get('revision')
                 if type(project) is not int or type(revision) is not int:
                     raise ValueError('Integer project and revision required')
-                if not db.execute('SELECT 1 FROM projects WHERE id=?', (project,)).fetchone():
+                project_row = db.execute('SELECT kind FROM projects WHERE id=?', (project,)).fetchone()
+                if not project_row:
                     raise ValueError('Unknown application project')
                 latest = db.execute('SELECT id,checked_at FROM application_checks WHERE project=? ORDER BY id DESC LIMIT 1', (project,)).fetchone()
                 if revision != (latest['id'] if latest else 0):
                     raise Conflict('Application status changed. Refresh and select the project again.')
                 status = data.get('status')
-                if status not in APPLICATION_STATES:
+                if status not in (PLACEMENT_STATES if project_row['kind']=='candidate-placement' else APPLICATION_STATES):
                     raise ValueError('Choose a supported application status')
                 evidence = required(data, 'evidence', 4000)
                 checked = due_date(data.get('checked_at'))
@@ -324,7 +365,7 @@ def make_server(path, port=4521):
                 if self.headers.get('Content-Type', '').split(';')[0] != 'application/json':
                     raise ValueError('Use application/json')
                 data = json.loads(self.rfile.read(length))
-                action = {'/api/agents': 'agents', '/api/tasks': 'tasks', '/api/update': 'update', '/api/job-project': 'job-project', '/api/application-check': 'application-check'}.get(self.path)
+                action = {'/api/agents': 'agents', '/api/tasks': 'tasks', '/api/update': 'update', '/api/candidate-project': 'candidate-project', '/api/job-project': 'job-project', '/api/application-check': 'application-check'}.get(self.path)
                 if action is None:
                     return self.send(404, {'error': 'Not found'})
                 self.send(200, office.mutate(action, data))
