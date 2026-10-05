@@ -39,6 +39,7 @@ function render() {
     const line=el('div',undefined,'agent');line.append(el('strong',project.name),el('p',`${completed}/${tasks.length} completed · ${ready.length} ready for handoff`));
     if(project.kind==='candidate-placement') line.append(el('p',`Candidate case · ${(state.projects || []).filter(p=>p.candidate===project.id).length} linked applications · Task completion does not confirm placement`));
     if(project.candidate) line.append(el('p',`Candidate: ${(state.projects || []).find(p=>p.id===project.candidate)?.name || project.candidate}`));
+    if(project.kind==='job-application') {const identity=(state.application_identities || []).find(i=>i.project===project.id);line.append(el('p',identity ? `Duplicate protection: ${identity.employer} / ${identity.requisition}` : 'Duplicate protection missing — submission blocked'));}
     const check=(state.checks || []).find(c=>c.project===project.id);
     if(check) {
       line.append(el('p',`Recorded status: ${check.status.replaceAll('_',' ')} · Checked: ${new Date(check.checked_at).toLocaleString()}`));
@@ -67,6 +68,7 @@ function render() {
   $('summary').replaceChildren();
   const due = state.tasks.filter(t => t.status === 'queued' && t.due && new Date(t.due) <= new Date()).length;
   for(const [label, count] of [['All tasks',state.tasks.length],['In progress',state.tasks.filter(t => t.status==='active').length],['Awaiting review',state.tasks.filter(t => t.status==='review').length],['Scheduled & ready',due]]) {const c=el('div',undefined,'stat'); c.append(el('strong',String(count)),el('span',label)); $('summary').append(c);}
+  for(const [id,kind] of [['identity-project','job-application'],['identity-candidate','candidate-placement']]) {const select=$(id),choice=select.value;select.replaceChildren();const empty=el('option','Choose a record');empty.value='';select.append(empty);for(const p of state.projects || []) if(p.kind===kind){const o=el('option',p.name);o.value=p.id;select.append(o);}select.value=choice;}
   renderRecruiting();
   renderBoard(); $('events').replaceChildren();
   for(const event of state.events) $('events').append(el('li', `${new Date(event.created).toLocaleString()} · ${event.task ? `Task #${event.task} · ` : ''}${event.message}`));
@@ -164,3 +166,5 @@ $('campaign-form').onsubmit=async(e)=>{
   catch(err){report(err.message,true);}finally{b.disabled=false;}
 };
 $('discover').onclick=async()=>{const b=$('discover');b.disabled=true;try{await save('/api/discover',{});}catch(err){report(err.message,true);}finally{b.disabled=false;}};
+
+$('identity-form').onsubmit=async(e)=>{e.preventDefault();const f=e.target,b=f.querySelector('button');b.disabled=true;try{await save('/api/application-identity',{project:Number(f.elements.project.value),candidate:Number(f.elements.candidate.value),employer:f.elements.employer.value,requisition:f.elements.requisition.value});f.reset();}catch(err){report(err.message,true);}finally{b.disabled=false;}};

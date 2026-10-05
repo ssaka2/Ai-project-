@@ -3,6 +3,8 @@ import argparse
 import json
 import secrets
 import threading
+import re
+import unicodedata
 import recruiting
 import sqlite3
 from contextlib import closing
@@ -116,6 +118,11 @@ class Office:
                 CREATE TABLE IF NOT EXISTS projects(
                     id INTEGER PRIMARY KEY, name TEXT NOT NULL UNIQUE COLLATE NOCASE,
                     kind TEXT NOT NULL, created TEXT NOT NULL);
+                CREATE TABLE IF NOT EXISTS application_identities(
+                    project INTEGER PRIMARY KEY REFERENCES projects(id),
+                    candidate INTEGER NOT NULL REFERENCES projects(id),
+                    employer TEXT NOT NULL, requisition TEXT NOT NULL,
+                    UNIQUE(candidate,employer,requisition));
                 CREATE TABLE IF NOT EXISTS application_checks(
                     id INTEGER PRIMARY KEY, project INTEGER NOT NULL REFERENCES projects(id),
                     status TEXT NOT NULL, evidence TEXT NOT NULL, checked_at TEXT NOT NULL,
@@ -189,6 +196,7 @@ class Office:
             db.execute('BEGIN')
             return {key: [dict(row) for row in db.execute(query)] for key, query in {
                 **recruiting.snapshot_queries(),
+                'application_identities': 'SELECT * FROM application_identities ORDER BY project',
                 'checks': 'SELECT * FROM application_checks ORDER BY id DESC',
                 'projects': 'SELECT * FROM projects ORDER BY id DESC',
                 'dependencies': 'SELECT * FROM dependencies ORDER BY task, prerequisite',
@@ -202,7 +210,30 @@ class Office:
             raise ValueError('JSON object required')
         with closing(self.connect()) as db, db:
             db.execute('BEGIN IMMEDIATE')
-            if action == 'campaign':
+            if action == 'application-identity':
+                project, candidate = data.get('project'), data.get('candidate')
+                if type(project) is not int or type(candidate) is not int:
+                    raise ValueError('Integer application and candidate IDs required')
+                row = db.execute("SELECT candidate FROM projects WHERE id=? AND kind='job-application'",(project,)).fetchone()
+                if not row or not db.execute("SELECT 1 FROM projects WHERE id=? AND kind='candidate-placement'",(candidate,)).fetchone():
+                    raise ValueError('Choose an application and a candidate case')
+                if row['candidate'] is not None and row['candidate'] != candidate:
+                    raise ValueError('Application belongs to another candidate')
+                employer = required(data,'employer',200).lower().rstrip('.')
+                if not re.fullmatch(r'[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?\.[a-z]{2,63}',employer) or '..' in employer:
+                    raise ValueError('Use the employer canonical domain, such as example.com, without a URL or www prefix')
+                employer = employer.removeprefix('www.')
+                requisition = ' '.join(unicodedata.normalize('NFKC',required(data,'requisition',200)).casefold().split())
+                existing = db.execute('SELECT * FROM application_identities WHERE project=?',(project,)).fetchone()
+                if existing and (existing['candidate'],existing['employer'],existing['requisition']) != (candidate,employer,requisition):
+                    raise Conflict('Application identity is already registered and cannot be replaced')
+                duplicate = db.execute('SELECT project FROM application_identities WHERE candidate=? AND employer=? AND requisition=?',(candidate,employer,requisition)).fetchone()
+                if duplicate and duplicate['project'] != project:
+                    raise Conflict(f"Duplicate application: use existing project #{duplicate['project']}")
+                db.execute('INSERT OR IGNORE INTO application_identities VALUES (?,?,?,?)',(project,candidate,employer,requisition))
+                db.execute('UPDATE projects SET candidate=? WHERE id=?',(candidate,project))
+                task, message = None, f'Application #{project}: unique candidate/employer/requisition registered'
+            elif action == 'campaign':
                 recruiting.configure(db, data, Conflict)
                 task, message = None, 'Recruiting campaign preferences saved'
             elif action in ('job-project', 'candidate-project'):
@@ -244,6 +275,8 @@ class Office:
                 status = data.get('status')
                 if status not in (PLACEMENT_STATES if project_row['kind']=='candidate-placement' else APPLICATION_STATES):
                     raise ValueError('Choose a supported application status')
+                if project_row['kind']=='job-application' and status in ('submitted','under_review','interview','offer','rejected','withdrawn'):
+                    require_identity(db, project)
                 evidence = required(data, 'evidence', 4000)
                 checked = due_date(data.get('checked_at'))
                 next_check = due_date(data.get('next_check'))
@@ -288,6 +321,8 @@ class Office:
                 if type(agent) is not int or not db.execute('SELECT 1 FROM agents WHERE id=?', (agent,)).fetchone():
                     raise ValueError('Choose an existing agent')
                 status = data.get('status', row['status'])
+                if row['title']=='Submit and record the outcome' and row['project'] and status != 'queued':
+                    require_identity(db, row['project'])
                 allowed = {'queued': ('queued', 'active'), 'active': ('active', 'review'),
                            'review': ('review', 'active', 'done'), 'done': ('done', 'queued')}
                 if row['status'] == 'queued' and status == 'active':
@@ -315,6 +350,11 @@ class Office:
                 raise ValueError('Unknown operation')
             db.execute('INSERT INTO events(task,message,created) VALUES (?,?,?)', (task, message, utcnow()))
         return self.snapshot()
+
+
+def require_identity(db, project):
+    if not db.execute('SELECT 1 FROM application_identities WHERE project=?',(project,)).fetchone():
+        raise ValueError('Register candidate, employer domain, and requisition ID in Duplicate protection before submission')
 
 
 class Conflict(ValueError):
@@ -375,7 +415,7 @@ def make_server(path, port=4521):
                 if self.path == '/api/discover':
                     recruiting.scan(office)
                     return self.send(200, office.snapshot())
-                action = {'/api/campaign': 'campaign', '/api/agents': 'agents', '/api/tasks': 'tasks', '/api/update': 'update', '/api/candidate-project': 'candidate-project', '/api/job-project': 'job-project', '/api/application-check': 'application-check'}.get(self.path)
+                action = {'/api/application-identity': 'application-identity', '/api/campaign': 'campaign', '/api/agents': 'agents', '/api/tasks': 'tasks', '/api/update': 'update', '/api/candidate-project': 'candidate-project', '/api/job-project': 'job-project', '/api/application-check': 'application-check'}.get(self.path)
                 if action is None:
                     return self.send(404, {'error': 'Not found'})
                 self.send(200, office.mutate(action, data))

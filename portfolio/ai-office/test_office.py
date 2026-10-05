@@ -129,8 +129,15 @@ class OfficeTests(unittest.TestCase):
         with self.assertRaises(ValueError): self.update(agent=99999)
         self.assertEqual(app.Office(self.path).snapshot()['tasks'][0]['agent'], agent)
 
+    def protect(self,project):
+        from contextlib import closing
+        with closing(self.office.connect()) as db,db:
+            candidate=db.execute("INSERT INTO projects(name,kind,created) VALUES ('Synthetic identity','candidate-placement',?)",(app.utcnow(),)).lastrowid
+        self.office.mutate('application-identity',{'project':project,'candidate':candidate,'employer':'example.com','requisition':'TEST-1'})
+
     def test_job_workflow_all_handoffs_and_reopening(self):
         state = self.office.mutate('job-project', {'name':'Example company - Engineer'})
+        self.protect(state['projects'][0]['id'])
         self.assertEqual(len(state['agents']), 20)
         tasks = sorted([t for t in state['tasks'] if t['project']], key=lambda t:t['id'])
         self.assertEqual(len(tasks), 9)
@@ -184,6 +191,7 @@ class OfficeTests(unittest.TestCase):
 
     def test_application_evidence_history_and_conflicts(self):
         project = self.office.mutate('job-project', {'name':'Status test'})['projects'][0]['id']
+        self.protect(project)
         data = {'project':project,'revision':0,'status':'submitted','evidence':'Synthetic receipt R1',
                 'checked_at':'2026-01-01T10:00:00Z','next_check':'2026-01-02T10:00:00Z'}
         state = self.office.mutate('application-check', data)
@@ -268,6 +276,19 @@ class HttpTests(unittest.TestCase):
         self.assertEqual(state['projects'][0]['kind'],'candidate-placement')
         self.assertEqual(len(state['tasks']),12)
         self.assertEqual(self.post('/api/candidate-project',payload)[0],409)
+
+    def test_duplicate_protection_http(self):
+        _,state=self.post('/api/candidate-project',{'name':'Identity candidate','profile':'Synthetic'})
+        candidate=state['projects'][0]['id']
+        ids=[]
+        for name in ('Portal A','Portal B'):
+            _,state=self.post('/api/job-project',{'name':name})
+            ids.append(state['projects'][0]['id'])
+        payload={'project':ids[0],'candidate':candidate,'employer':'example.com','requisition':'R1'}
+        self.assertEqual(self.post('/api/application-identity',payload,{'X-Office-Token':''})[0],403)
+        self.assertEqual(self.post('/api/application-identity',payload)[0],200)
+        self.assertEqual(self.post('/api/application-identity',{**payload,'project':ids[1]})[0],409)
+        self.assertEqual(len(self.get('/api/export')[1]['application_identities']),1)
 
     def test_campaign_http_auth_and_validation(self):
         self.assertEqual(self.post('/api/campaign',{}, {'X-Office-Token':''})[0],403)

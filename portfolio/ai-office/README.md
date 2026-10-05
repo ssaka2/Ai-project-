@@ -41,7 +41,7 @@ python -m unittest discover -s portfolio/ai-office -v
 node --check portfolio/ai-office/app.js
 ```
 
-Thirty-one automated service/HTTP tests cover the review lifecycle, persistence after reopening the database, competing edits, timezone normalization, scheduled starts, agent changes, validation, exports, cross-origin rejection, and static assets.
+Thirty-seven automated service/HTTP tests cover the review lifecycle, persistence after reopening the database, competing edits, timezone normalization, scheduled starts, agent changes, validation, exports, cross-origin rejection, and static assets.
 
 Optional real browser verification:
 
@@ -139,3 +139,16 @@ Saving changed preferences invalidates existing blocked packages as **Needs revi
 API additions: `POST /api/campaign` accepts integer `candidate`, current integer `revision` (0 initially), comma-separated `boards`, `titles`, `locations`, `skills`, plain-text `resume`, boolean `enabled`, and `consent: true`. `POST /api/discover` checks due campaigns. Both use the existing local token/origin protection. Snapshots/exports now include campaigns and job records, including private CV text; keep exports private. The queue shows the newest 50 non-baseline records; exports include all records. The CLI starts the worker; importing `make_server` alone does not start background scans.
 
 Provider reference: https://docs.greenhouse.io/job-board.html. Public job-list reads are unauthenticated. Application submission requires an employer Job Board API key and job-specific form validation; GitHub access does not provide that authorization. No automatic submission or email/status-monitoring connector is included. Tests use provider fixtures; they do not claim a real employer submission or guaranteed provider availability.
+
+
+## Duplicate application protection
+
+Job discovery deduplication alone does not prevent two differently named application projects from representing the same opening. Before submission, use **Duplicate protection** to register the candidate case, the employer's canonical domain, and its stable requisition ID. Use the same employer requisition across portals; a portal-specific posting ID may differ. The server normalizes domain case/`www.`/trailing dots and requisition Unicode/case/whitespace.
+
+A database uniqueness constraint reserves `(candidate, employer, requisition)` for one project, inside an immediate write transaction. A second project receives HTTP 409 and the existing project ID, including for concurrent requests. Repeating the same registration on the original project is safe. Different candidates or requisitions remain permitted. Registered identities cannot be silently changed or reset after rejection/withdrawal; continue using the original project. A repeat status observation appends history to that same application, not a second application.
+
+Existing projects remain intact. Unregistered application projects cannot start submission work or record submitted/under-review/interview/offer/rejected/withdrawn statuses until registered. Unknown, blocked, and not-applied notes remain available. Historical statuses are preserved, not retrospectively verified. The UI labels missing protection, and JSON export includes all registered identities.
+
+API: `POST /api/application-identity` with integer `project`, integer `candidate`, `employer` domain and `requisition` reference; requires existing local write authorization. Registration links a standalone application to its candidate, but cannot move an already-linked application to another candidate.
+
+Verification covers concurrent registration, cross-portal normalized identities, retry safety, persistence, separate candidates/requisitions, blocked legacy submission, HTTP authorization/409 responses, and browser-visible duplicate rejection. This protects records in this workspace; it cannot discover previous applications made elsewhere, resolve duplicated candidate cases/employer aliases, or identify reposted jobs with changed requisition IDs. Record previous applications against the same candidate and stable identity before proceeding. No automatic submission connector exists, so no live external application history has been audited and no real-world zero-duplicate guarantee is claimed.
