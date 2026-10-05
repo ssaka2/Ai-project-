@@ -277,6 +277,15 @@ class HttpTests(unittest.TestCase):
         self.assertEqual(len(state['tasks']),12)
         self.assertEqual(self.post('/api/candidate-project',payload)[0],409)
 
+    def test_staff_chat_http(self):
+        _,state=self.post('/api/candidate-project',{'name':'Chat candidate','profile':'Synthetic'})
+        data={'candidate':state['projects'][0]['id'],'agent':state['agents'][0]['id'],'question':'What is my status?'}
+        self.assertEqual(self.post('/api/staff-chat',data,{'X-Office-Token':''})[0],403)
+        code,state=self.post('/api/staff-chat',data)
+        self.assertEqual(code,200)
+        self.assertIn('No linked application',state['chats'][0]['answer'])
+        self.assertEqual(self.post('/api/staff-chat',{**data,'question':''})[0],400)
+
     def test_duplicate_protection_http(self):
         _,state=self.post('/api/candidate-project',{'name':'Identity candidate','profile':'Synthetic'})
         candidate=state['projects'][0]['id']

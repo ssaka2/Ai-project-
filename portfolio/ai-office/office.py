@@ -6,6 +6,7 @@ import threading
 import re
 import unicodedata
 import recruiting
+import staff_chat
 import sqlite3
 from contextlib import closing
 from datetime import datetime, timezone
@@ -118,6 +119,11 @@ class Office:
                 CREATE TABLE IF NOT EXISTS projects(
                     id INTEGER PRIMARY KEY, name TEXT NOT NULL UNIQUE COLLATE NOCASE,
                     kind TEXT NOT NULL, created TEXT NOT NULL);
+                CREATE TABLE IF NOT EXISTS staff_chats(
+                    id INTEGER PRIMARY KEY, candidate INTEGER NOT NULL REFERENCES projects(id),
+                    agent INTEGER NOT NULL REFERENCES agents(id), project INTEGER REFERENCES projects(id),
+                    question TEXT NOT NULL, answer TEXT NOT NULL, created TEXT NOT NULL);
+                CREATE INDEX IF NOT EXISTS chats_candidate ON staff_chats(candidate,id);
                 CREATE TABLE IF NOT EXISTS application_identities(
                     project INTEGER PRIMARY KEY REFERENCES projects(id),
                     candidate INTEGER NOT NULL REFERENCES projects(id),
@@ -196,6 +202,7 @@ class Office:
             db.execute('BEGIN')
             return {key: [dict(row) for row in db.execute(query)] for key, query in {
                 **recruiting.snapshot_queries(),
+                'chats': 'SELECT * FROM staff_chats ORDER BY id DESC',
                 'application_identities': 'SELECT * FROM application_identities ORDER BY project',
                 'checks': 'SELECT * FROM application_checks ORDER BY id DESC',
                 'projects': 'SELECT * FROM projects ORDER BY id DESC',
@@ -210,7 +217,14 @@ class Office:
             raise ValueError('JSON object required')
         with closing(self.connect()) as db, db:
             db.execute('BEGIN IMMEDIATE')
-            if action == 'application-identity':
+            if action == 'staff-chat':
+                candidate, agent, project = data.get('candidate'), data.get('agent'), data.get('project')
+                question = data.get('question')
+                answer = staff_chat.reply(db,candidate,agent,question,project)
+                db.execute('INSERT INTO staff_chats(candidate,agent,project,question,answer,created) VALUES (?,?,?,?,?,?)',
+                           (candidate,agent,project,question.strip(),answer,utcnow()))
+                task, message = None, f'Candidate #{candidate}: automated staff-role chat recorded'
+            elif action == 'application-identity':
                 project, candidate = data.get('project'), data.get('candidate')
                 if type(project) is not int or type(candidate) is not int:
                     raise ValueError('Integer application and candidate IDs required')
@@ -415,7 +429,7 @@ def make_server(path, port=4521):
                 if self.path == '/api/discover':
                     recruiting.scan(office)
                     return self.send(200, office.snapshot())
-                action = {'/api/application-identity': 'application-identity', '/api/campaign': 'campaign', '/api/agents': 'agents', '/api/tasks': 'tasks', '/api/update': 'update', '/api/candidate-project': 'candidate-project', '/api/job-project': 'job-project', '/api/application-check': 'application-check'}.get(self.path)
+                action = {'/api/staff-chat': 'staff-chat', '/api/application-identity': 'application-identity', '/api/campaign': 'campaign', '/api/agents': 'agents', '/api/tasks': 'tasks', '/api/update': 'update', '/api/candidate-project': 'candidate-project', '/api/job-project': 'job-project', '/api/application-check': 'application-check'}.get(self.path)
                 if action is None:
                     return self.send(404, {'error': 'Not found'})
                 self.send(200, office.mutate(action, data))

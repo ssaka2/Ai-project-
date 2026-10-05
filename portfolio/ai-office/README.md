@@ -41,7 +41,7 @@ python -m unittest discover -s portfolio/ai-office -v
 node --check portfolio/ai-office/app.js
 ```
 
-Thirty-seven automated service/HTTP tests cover the review lifecycle, persistence after reopening the database, competing edits, timezone normalization, scheduled starts, agent changes, validation, exports, cross-origin rejection, and static assets.
+Forty-two automated service/HTTP tests cover the review lifecycle, persistence after reopening the database, competing edits, timezone normalization, scheduled starts, agent changes, validation, exports, cross-origin rejection, and static assets.
 
 Optional real browser verification:
 
@@ -152,3 +152,16 @@ Existing projects remain intact. Unregistered application projects cannot start 
 API: `POST /api/application-identity` with integer `project`, integer `candidate`, `employer` domain and `requisition` reference; requires existing local write authorization. Registration links a standalone application to its candidate, but cannot move an already-linked application to another candidate.
 
 Verification covers concurrent registration, cross-portal normalized identities, retry safety, persistence, separate candidates/requisitions, blocked legacy submission, HTTP authorization/409 responses, and browser-visible duplicate rejection. This protects records in this workspace; it cannot discover previous applications made elsewhere, resolve duplicated candidate cases/employer aliases, or identify reposted jobs with changed requisition IDs. Record previous applications against the same candidate and stable identity before proceeding. No automatic submission connector exists, so no live external application history has been audited and no real-world zero-duplicate guarantee is claimed.
+
+
+## Candidate staff chat
+
+Use **Chat with your office** to select a candidate and any staff role. Ask about status, next checks, blockers, CV work, or interviews. Optionally select one linked opening. Each reply reads current saved records in the same database transaction: candidate status, up to 20 application summaries, evidence references and checked-at timestamps, next checks, duplicate-protection blockers, and (for next-step questions) up to eight open tasks with the selected staff prioritized. Discovery counts are explicitly separate from submissions. Unsupported questions receive a records summary and supported-topic guidance, not invented advice.
+
+This is a deterministic **automated records assistant**, not an AI model, live employee, or portal/inbox monitor. No API key is needed. Staff selections affect attribution/responsibility and task ordering; they do not create independently running people. Unknown or missing status stays unknown. Chat cannot submit applications, message employers, update statuses, or schedule interviews. Saved replies describe records at reply time and can become stale; ask again for a fresh summary.
+
+Conversation history persists by candidate/staff, survives reload, and is included in JSON export. The UI shows the most recent 20 exchanges for the selected conversation. Replies filter linked records to the selected candidate and reject an application from another candidate. HTML is displayed as text. API: `POST /api/staff-chat` with integer `candidate`, integer `agent`, optional integer `project`, and `question` (1–2000 characters), using the local write token/origin protection.
+
+**Access boundary:** this is still a single trusted local workspace. The candidate selector is not authentication; the operator can view all candidates and exports contain all chats. There are no separate candidate accounts, remote candidate portal, private multi-user permissions, live staff messaging, or notifications. Do not expose this server online. A secure candidate-facing service needs authentication and server-side authorization before separate candidates can access it privately.
+
+Tests verify unknown-status handling, evidence/timestamps, candidate and application scoping, read-only application behavior, all staff roles, validation, persistence, HTTP authorization, and browser conversations with two staff roles.
