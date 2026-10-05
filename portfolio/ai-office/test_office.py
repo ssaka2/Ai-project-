@@ -346,7 +346,7 @@ class HttpTests(unittest.TestCase):
     def test_errors_and_static_assets(self):
         self.assertEqual(self.post('/api/tasks', [])[0], 400)
         self.assertEqual(self.post('/api/unknown', {})[0], 404)
-        for route, mime in [('/', 'text/html'),('/app.js', 'text/javascript'),('/style.css','text/css')]:
+        for route, mime in [('/', 'text/html'),('/app.js', 'text/javascript'),('/workflow.js','text/javascript'),('/style.css','text/css')]:
             with urlopen(self.base+route) as response:
                 self.assertTrue(response.headers['Content-Type'].startswith(mime))
                 self.assertIn("frame-ancestors 'none'", response.headers['Content-Security-Policy'])

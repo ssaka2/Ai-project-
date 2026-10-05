@@ -208,3 +208,12 @@ The adapter and all-role drafting paths are tested with fixtures, including time
 ### Draft freshness correction
 
 AI drafts now store a SHA-256 fingerprint of their source context, model, and system instructions. A changed CV, staff instructions, prerequisites, or rejection lessons prevents reuse of an older draft, even when the task version is unchanged. Save the task to create a new version before regenerating. Legacy drafts with no fingerprint remain readable but are not trusted as current. This verifies source consistency, not the factual accuracy of model output.
+
+
+## Interactive 3D office workflow
+
+The office map uses CSS perspective and raised station cards to show ten workflow stages: intake, profile/fit, discovery, CV tailoring, quality review, apply/track, learn/retry, interview, offer/start, and candidate success. It needs no 3D library, remote asset, GPU API, or extra package. Select a station to see its purpose and staff owner; select a candidate to view recorded task counts, actual assigned staff, candidate status and pending rejection reviews. Task links filter and scroll to the existing board. The route legend explicitly shows rejection returning to fit/tailoring/QA.
+
+With no candidate selected, the view is a blueprint, not simulated activity. Stage counts reflect saved task completion, never proof of submission, an interview, or placement. The diagram groups template tasks by their titles; custom standalone tasks are available on the board and are not automatically classified into stations. Up to 15 matching tasks appear in the stage detail. Default station leads are shown when no tasks are assigned; otherwise the actual owners are listed.
+
+Keyboard-operable station buttons expose selection with `aria-pressed`. A flat-view toggle is available; mobile and reduced-motion layouts remove perspective automatically. The scene is a stylized 3D workflow, not a free-orbit virtual office or animated employee simulation. Browser verification covers station selection, candidate scoping, rejection details, task navigation, toggling, and mobile overflow.

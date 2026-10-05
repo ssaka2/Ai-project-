@@ -71,6 +71,7 @@ function render() {
   for(const [label, count] of [['All tasks',state.tasks.length],['In progress',state.tasks.filter(t => t.status==='active').length],['Awaiting review',state.tasks.filter(t => t.status==='review').length],['Scheduled & ready',due]]) {const c=el('div',undefined,'stat'); c.append(el('strong',String(count)),el('span',label)); $('summary').append(c);}
   for(const [id,kind] of [['identity-project','job-application'],['identity-candidate','candidate-placement']]) {const select=$(id),choice=select.value;select.replaceChildren();const empty=el('option','Choose a record');empty.value='';select.append(empty);for(const p of state.projects || []) if(p.kind===kind){const o=el('option',p.name);o.value=p.id;select.append(o);}select.value=choice;}
   renderLearning();
+  if(typeof renderWorkflow==='function')renderWorkflow();
   renderChat();
   renderRecruiting();
   renderBoard(); $('events').replaceChildren();
