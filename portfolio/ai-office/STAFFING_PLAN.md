@@ -29,3 +29,8 @@ The gate controls starting the template submission task. It does not send applic
 GitHub publishes and verifies the code. Outlook Email was found in the plugin directory but is not connected; it could help inspect authorized status emails in this conversation after connection. A ChatGPT connection does not automatically authenticate the standalone app. Runtime OAuth, candidate-specific permissions, secret storage and polling still need implementation. The plugin search did not return a direct job-application submission integration; directory results are not exhaustive. Unrelated plugins were not installed.
 
 Do not deploy the current loopback development server as a public staffing portal. Authentication, server-side candidate isolation, protected storage and production hosting are prerequisites for remote candidate access. Current tests use synthetic data; none establishes live applications, actual employer feedback ingestion, or guaranteed placements.
+
+
+## AI runtime increment
+
+An optional local Ollama adapter now generates drafts for active tasks across all staff roles. It has no action tools, stores unverified text separately, and preserves human review and submission gates. This does not replace the unimplemented authenticated submit/inbox adapters, production candidate accounts, or actual model installation. See README for configuration and tested limits.

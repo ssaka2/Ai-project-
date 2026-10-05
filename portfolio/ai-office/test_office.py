@@ -298,6 +298,10 @@ class HttpTests(unittest.TestCase):
             self.assertEqual(self.post(route,{}, {'X-Office-Token':''})[0],403)
             self.assertEqual(self.post(route,{})[0],400)
 
+    def test_ai_route_rejects_unauthorized_and_invalid_requests(self):
+        self.assertEqual(self.post('/api/ai-draft',{}, {'X-Office-Token':''})[0],403)
+        self.assertEqual(self.post('/api/ai-draft',{})[0],400)
+
     def test_staff_chat_http(self):
         _,state=self.post('/api/candidate-project',{'name':'Chat candidate','profile':'Synthetic'})
         data={'candidate':state['projects'][0]['id'],'agent':state['agents'][0]['id'],'question':'What is my status?'}

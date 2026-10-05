@@ -62,7 +62,7 @@ function render() {
   const selected = $('agent-select').value; $('agent-select').replaceChildren(); $('agents').replaceChildren();
   for(const agent of state.agents) {
     const option = el('option', agent.name); option.value = agent.id; $('agent-select').append(option);
-    const card = el('div', undefined, 'agent'); card.append(el('strong', agent.name), el('p', agent.role), el('p', 'Manual task role · Automated records chat available'), el('p', `${workload.get(agent.id) || 0} open tasks`, 'eyebrow'));
+    const card = el('div', undefined, 'agent'); card.append(el('strong', agent.name), el('p', agent.role), el('p', 'Review-based task role · Optional local AI drafts · Records chat'), el('p', `${workload.get(agent.id) || 0} open tasks`, 'eyebrow'));
     const edit = el('button', 'Edit', 'secondary'); edit.onclick = () => {const f = $('agent-form'); for(const k of ['id','name','role']) f.elements[k].value = agent[k]; f.elements.name.focus();}; card.append(edit); $('agents').append(card);
   }
   if(state.agents.some(a => String(a.id) === selected)) $('agent-select').value = selected;
@@ -107,6 +107,8 @@ function renderBoard() {
         const discard=el('button','Discard local edits','secondary'); discard.onclick=()=>{drafts.delete(task.id);renderBoard();}; actions.append(discard);
         if(drafts.get(task.id).version !== task.version) card.append(el('p','This task changed elsewhere. Copy your notes before discarding local edits and refreshing.', 'error'));
       }
+      if(task.status==='active') {const ai=el('button','Generate AI draft','secondary');ai.onclick=async()=>{ai.disabled=true;try{if(drafts.has(task.id))throw new Error('Save or discard local task edits before generating.');await save('/api/ai-draft',{id:task.id,version:task.version});}catch(err){report(err.message,true);}finally{ai.disabled=false;}};actions.append(ai);}
+      for(const draft of (state.ai_drafts || []).filter(d=>d.task===task.id).slice(0,3)) {const detail=el('details');detail.append(el('summary',`AI draft · task version ${draft.task_version}${draft.task_version!==task.version ? ' · earlier version' : ''}`),el('p',`Model: ${draft.model} · ${new Date(draft.created).toLocaleString()}`));const label=el('label','Unverified AI draft'),text=el('textarea');text.readOnly=true;text.value=draft.content;label.append(text);detail.append(label);card.append(detail);}
       card.append(actions); column.append(card);
     }
     if(tasks.length > limits[status]) {const more=el('button',`Show more ${titles[status].toLowerCase()}`, 'secondary'); more.onclick=()=>{limits[status]+=PAGE_SIZE;renderBoard();}; column.append(more);}

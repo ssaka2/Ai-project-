@@ -41,7 +41,7 @@ python -m unittest discover -s portfolio/ai-office -v
 node --check portfolio/ai-office/app.js
 ```
 
-Fifty-seven automated service/HTTP tests cover the review lifecycle, persistence after reopening the database, competing edits, timezone normalization, scheduled starts, agent changes, validation, exports, cross-origin rejection, and static assets.
+Sixty-four automated service/HTTP tests cover the review lifecycle, persistence after reopening the database, competing edits, timezone normalization, scheduled starts, agent changes, validation, exports, cross-origin rejection, and static assets.
 
 Optional real browser verification:
 
@@ -169,7 +169,7 @@ Tests verify unknown-status handling, evidence/timestamps, candidate and applica
 
 ## Reliability verification — October 5, 2026
 
-The expanded suite has 57 service/HTTP tests. Additional regression coverage checks extreme timestamp conversion, oversized/negative IDs, non-ASCII write tokens, deeply nested JSON recovery, malformed discovery input, stopped campaign scan metadata, atomic rollback after a malformed job, concurrent discovery exclusion, and rejected source redirects. Invalid requests return controlled errors instead of disconnecting the client. A paused campaign no longer updates its last-scan timestamp without a source request.
+The expanded suite has 64 service/HTTP tests. Additional regression coverage checks extreme timestamp conversion, oversized/negative IDs, non-ASCII write tokens, deeply nested JSON recovery, malformed discovery input, stopped campaign scan metadata, atomic rollback after a malformed job, concurrent discovery exclusion, and rejected source redirects. Invalid requests return controlled errors instead of disconnecting the client. A paused campaign no longer updates its last-scan timestamp without a source request.
 
 During a save, form controls and board navigation are disabled to prevent edits from being silently cleared when the response arrives. Older refresh responses cannot replace state from a newer save. Browser verification checks this lock and its release, literal rendering of HTML-like chat messages, and the existing candidate, application, duplicate protection, staff chat, persistence, and mobile flows. This is functional verification using synthetic candidate data and feed fixtures; no live applications or employer inbox checks are performed.
 
@@ -186,3 +186,20 @@ See [STAFFING_PLAN.md](STAFFING_PLAN.md) for the full workflow, named responsibi
 A candidate's latest rejected application observations require review before the next template submission task can start. After reviewing them, record a corrective check for the next application against all current lessons; a newer lesson invalidates the previous check. The server enforces this in the same write transaction as task start. It does not send an application, automatically edit the CV, or verify that a human followed the instructions. Existing active tasks and factual status observations are not blocked. Reviews/checks persist and are included in private exports.
 
 API: `POST /api/rejection-review` with integer `check_id`, integer staff `owner`, `basis`, required `reason`, and `corrective_action` (each up to 4000 characters). `POST /api/application-preflight` with integer `project`, integer `owner`, current maximum review ID for that candidate as `review_revision` (0 without lessons), and required `evidence` (up to 4000 characters). An application must have registered duplicate protection. Stale lesson revisions and duplicate reviews return 409. Both endpoints require the existing local token and origin checks. The UI shows up to 30 lessons and 10 checks; exports retain all records.
+
+
+## Optional AI drafting for every staff role
+
+Active task cards now have **Generate AI draft**. The local Ollama adapter sends the assigned role, saved task brief/notes, prerequisite results, the same candidate's configured master CV, and rejection lessons to an installed model. It saves the response as an **unverified draft**, separately from task results, status observations, and application receipts. All 30 built-in roles support this drafting interface. Submission/status roles can generate preparation instructions only; the model has no external action tools.
+
+Install Ollama on the computer running this office and install a model suitable for that computer. Set `AI_OFFICE_MODEL` to the exact installed model name before starting:
+
+```sh
+AI_OFFICE_MODEL='your-installed-model-name' python portfolio/ai-office/office.py
+```
+
+Start a task, save its notes, and request the draft. Review its factual claims and use the existing result/review flow. Requests go only to `http://127.0.0.1:11434/api/generate`, with proxy use and redirects disabled, a 45-second socket timeout and a response-size cap. No model is bundled or downloaded automatically. A configured name does not prove the model is installed or responsive. Missing configuration/failures return an error without changing task state. Only one inference request runs at a time in this process. Inference may continue in Ollama after a client timeout; no automatic retry occurs.
+
+Repeated requests for the same task version reuse the existing draft. If saved task/context changes during generation, the response is discarded. Old drafts are marked with their task version and remain in exports. Unsaved notes must be saved or discarded first. Drafting does not complete tasks, approve CVs, submit applications, read email, or guarantee employment. System instructions discourage unsupported claims, but model factual accuracy is **not guaranteed**; review remains required. No self-modifying agent or automatic model training is implemented.
+
+The adapter and all-role drafting paths are tested with fixtures, including timeout, bad output, missing configuration, duplicate generation, changed-task rejection, and candidate-context isolation. Live model quality and throughput have not been tested here because Ollama/model configuration is absent. Browser CI verifies the missing-runtime path rather than claiming real inference. Protocol: https://docs.ollama.com/api/generate.

@@ -7,6 +7,7 @@ import re
 import unicodedata
 import recruiting
 import staff_chat
+import ai_staff
 import application_learning
 import sqlite3
 from contextlib import closing
@@ -120,6 +121,9 @@ class Office:
                 CREATE TABLE IF NOT EXISTS projects(
                     id INTEGER PRIMARY KEY, name TEXT NOT NULL UNIQUE COLLATE NOCASE,
                     kind TEXT NOT NULL, created TEXT NOT NULL);
+                CREATE TABLE IF NOT EXISTS ai_drafts(
+                    id INTEGER PRIMARY KEY, task INTEGER NOT NULL REFERENCES tasks(id), task_version INTEGER NOT NULL,
+                    model TEXT NOT NULL, content TEXT NOT NULL, created TEXT NOT NULL, UNIQUE(task,task_version));
                 CREATE TABLE IF NOT EXISTS rejection_reviews(
                     id INTEGER PRIMARY KEY, check_id INTEGER NOT NULL UNIQUE REFERENCES application_checks(id),
                     candidate INTEGER NOT NULL REFERENCES projects(id), owner INTEGER NOT NULL REFERENCES agents(id),
@@ -211,6 +215,7 @@ class Office:
             db.execute('BEGIN')
             return {key: [dict(row) for row in db.execute(query)] for key, query in {
                 **recruiting.snapshot_queries(),
+                'ai_drafts': 'SELECT * FROM ai_drafts ORDER BY id DESC',
                 'rejection_reviews': 'SELECT * FROM rejection_reviews ORDER BY id DESC',
                 'application_preflights': 'SELECT * FROM application_preflights ORDER BY id DESC',
                 'chats': 'SELECT * FROM staff_chats ORDER BY id DESC',
@@ -448,6 +453,8 @@ def make_server(path, port=4521):
                 data = json.loads(self.rfile.read(length))
                 if not isinstance(data,dict):
                     raise ValueError('JSON object required')
+                if self.path == '/api/ai-draft':
+                    return self.send(200, ai_staff.draft(office,data,utcnow))
                 if self.path == '/api/discover':
                     recruiting.scan(office)
                     return self.send(200, office.snapshot())
