@@ -87,7 +87,7 @@ def main():
                 page.get_by_label('Application', exact=True).select_option(label='Example company — software engineer')
                 page.get_by_label('Observed status', exact=True).select_option('submitted')
                 page.get_by_label('Evidence or access blocker').fill('Synthetic confirmation REF-TEST; not a real application.')
-                page.get_by_label('Next check (local time)', exact=True).fill('2099-01-01T10:00:00')
+                page.get_by_label('Next check (local time)', exact=True).fill('2099-01-01T10:00')
                 page.get_by_role('button', name='Record application status', exact=True).click()
                 expect(page.locator('#projects')).to_contain_text('Recorded status: submitted')
                 page.reload()
