@@ -210,6 +210,18 @@ def main():
                 page.locator('.office-station').filter(has=page.get_by_text('Tailor documents', exact=True)).click()
                 expect(page.locator('#workflow-detail')).to_contain_text('Portfolio Tailoring Team')
                 expect(page.locator('#workflow-detail')).to_contain_text('Prepare the tailored portfolio')
+                candidate=next(p['id'] for p in office.snapshot()['projects'] if p['name']=='Synthetic placement case')
+                with closing(office.connect()) as db, db:
+                    db.execute('INSERT INTO recruiting_jobs VALUES (?,?,?,?,?,?,?,?,?,?,?)',(candidate,'example','handoff-test','Software Engineer fixture','https://example.com/jobs/handoff','Chicago, IL','C# SQL Server fixture requirements',utcnow(),'blocked','Synthetic matching fixture; no live job','Fixture CV'))
+                page.reload()
+                queue=page.locator('#job-queue details').filter(has_text='Software Engineer fixture')
+                queue.locator('summary').click()
+                queue.get_by_role('button',name='Create workflow from this opening',exact=True).click()
+                expect(queue).to_contain_text('Linked application project #')
+                expect(queue.get_by_role('button',name='Create workflow from this opening',exact=True)).to_have_count(0)
+                page.reload()
+                expect(page.locator('#job-queue')).to_contain_text('Linked application project #')
+                assert len(office.snapshot()['recruiting_workflows'])==1
                 assert not errors, errors
                 browser.close()
                 print('Chromium: agent creation, task lifecycle, reload persistence, search, mobile layout passed.')

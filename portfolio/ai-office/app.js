@@ -156,6 +156,13 @@ function renderRecruiting() {
   const jobs=(state.job_queue || []).filter(j=>j.outcome!=='baseline');
   for(const j of jobs.slice(0,50)) {
     const row=el('details',undefined,'agent');row.append(el('summary',`${j.title} · ${j.location} · ${j.outcome}`),el('p',`Candidate: ${(state.projects || []).find(p=>p.id===j.candidate)?.name} · ${j.board} / ${j.job_id}`),el('p',j.reason),el('p',`Source: ${j.url}`),el('p',`First observed: ${new Date(j.first_seen).toLocaleString()}`));
+    const linked=(state.recruiting_workflows || []).find(w=>w.candidate===j.candidate && w.board===j.board && w.job_id===j.job_id);
+    if(linked){row.append(el('p',`Linked application project #${linked.project}`));}
+    else if(j.outcome==='blocked'){
+      const button=el('button','Create workflow from this opening');button.type='button';
+      button.onclick=async()=>{button.disabled=true;try{await save('/api/queue-workflow',{candidate:j.candidate,board:j.board,job_id:j.job_id});}catch(err){report(err.message,true);}finally{button.disabled=false;}};
+      row.append(button);
+    }
     const label=el('label','Prepared CV draft'),draft=el('textarea');draft.readOnly=true;draft.value=j.draft;label.append(draft);row.append(label);$('job-queue').append(row);
   }
   $('job-queue').append(el('p',`${jobs.length} new openings recorded; showing up to 50. Full records are included in the workspace export.`));

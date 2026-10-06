@@ -30,6 +30,11 @@ def initialize(db):
             location TEXT NOT NULL, description TEXT NOT NULL, first_seen TEXT NOT NULL,
             outcome TEXT NOT NULL, reason TEXT NOT NULL, draft TEXT NOT NULL,
             PRIMARY KEY(candidate,board,job_id));
+        CREATE TABLE IF NOT EXISTS recruiting_workflows(
+            candidate INTEGER NOT NULL, board TEXT NOT NULL, job_id TEXT NOT NULL,
+            project INTEGER NOT NULL UNIQUE REFERENCES projects(id),
+            PRIMARY KEY(candidate,board,job_id),
+            FOREIGN KEY(candidate,board,job_id) REFERENCES recruiting_jobs(candidate,board,job_id));
         CREATE TABLE IF NOT EXISTS recruiting_baselines(
             candidate INTEGER NOT NULL REFERENCES projects(id), board TEXT NOT NULL,
             created TEXT NOT NULL, PRIMARY KEY(candidate,board));
@@ -37,7 +42,8 @@ def initialize(db):
 
 
 def snapshot_queries():
-    return {'campaigns':'SELECT * FROM recruiting_campaigns ORDER BY candidate',
+    return {'recruiting_workflows':'SELECT * FROM recruiting_workflows ORDER BY project',
+            'campaigns':'SELECT * FROM recruiting_campaigns ORDER BY candidate',
             'job_queue':'SELECT * FROM recruiting_jobs ORDER BY first_seen DESC,job_id'}
 
 
@@ -208,3 +214,28 @@ def worker(office, stop):
         except sqlite3.Error:
             pass  # Database errors retry on the next tick, never report a submission.
         stop.wait(30)
+
+
+def handoff(db, data, conflict):
+    """Resolve stored source data inside the workflow-creation transaction."""
+    candidate, board, job_id = data.get('candidate'), data.get('board'), data.get('job_id')
+    if type(candidate) is not int or not isinstance(board,str) or not isinstance(job_id,str) or len(job_id)>200:
+        raise ValueError('Candidate, board and job ID required')
+    board = normalize_board(board)
+    key = (candidate,board,job_id)
+    linked = db.execute('SELECT project FROM recruiting_workflows WHERE candidate=? AND board=? AND job_id=?',key).fetchone()
+    if linked:
+        raise conflict(f"Already linked to application project #{linked['project']}; use the existing workflow")
+    job = db.execute('SELECT * FROM recruiting_jobs WHERE candidate=? AND board=? AND job_id=?',key).fetchone()
+    if not job or job['outcome']!='blocked':
+        raise ValueError('Only a current keyword-matched queue entry can enter the workflow; review campaign preferences and source evidence')
+    status = db.execute('SELECT status FROM application_checks WHERE project=? ORDER BY id DESC LIMIT 1',(candidate,)).fetchone()
+    if status and status['status'] in STOP_STATES:
+        raise ValueError('Candidate search is stopped; review the candidate status first')
+    # Deterministic unique name without leaking candidate details or truncating JD.
+    row = db.execute('SELECT rowid FROM recruiting_jobs WHERE candidate=? AND board=? AND job_id=?',key).fetchone()
+    name = f"Queue #{row[0]}: " + job['title'][:90]
+    context = (f"\nDiscovery source: {board} / {job_id}\nFirst observed: {job['first_seen']}"
+               f"\nSource location: {job['location']}\nFreshness and eligibility remain unverified. "
+               'No task has been completed and no application has been sent.')
+    return key, dict(name=name,candidate=candidate,source_url=job['url'],description=job['description']), context
