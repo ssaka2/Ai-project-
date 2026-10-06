@@ -251,3 +251,7 @@ A transactional source-to-project link prevents duplicate workflow creation from
 Use **Check AI readiness** to distinguish missing configuration, unreachable Ollama, a missing model, invalid inventory, and a locally listed model. The check uses Ollama's documented `GET /api/tags` endpoint on `127.0.0.1:11434`, disables proxies/redirects, times out after three seconds and caps the response at 250 KB. It is exposed through the office's token-protected `POST /api/readiness` route.
 
 The check never generates text, downloads a model or changes tasks. A listed model does not prove inference works: start a task and generate a draft to verify that separately. Job source access requires a real campaign scan. Automatic submission and inbox tracking remain unconnected. API reference: https://github.com/ollama/ollama/blob/main/docs/api.md .
+
+## Private always-on pilot
+
+See [the Linux/Azure deployment guide](deploy/README.md) for a restricted systemd service and SSH-only access. Run `python3 verify_pilot.py` on the host to detect missing dependencies, then use `--test-model --board ACTUAL_EMPLOYER_TOKEN` for a synthetic inference and live feed checks. A successful connectivity check is not certification of staffing readiness. No VM is provisioned by these files.
