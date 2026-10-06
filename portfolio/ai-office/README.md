@@ -18,7 +18,7 @@ Open http://127.0.0.1:4521 on the same computer. On Windows, `py` can replace `p
 4. Review the result, then approve completion or send it back for revision.
 5. Search the board or export the workspace as JSON.
 
-Agents are **roles for manual planning**, not autonomous AI processes. You perform the work and paste results into the board. No model generation or external submission is connected. Configured Greenhouse discovery runs in the background when launched with the command above. Scheduling controls when a task can be started; it does not run a task automatically. Refresh to update scheduled availability. Times are entered in the browser's local timezone and stored in UTC.
+Agents are **roles for manual planning**, not autonomous AI processes. You perform the work and paste results into the board. No model generation or external submission is connected. Configured Greenhouse/Lever discovery runs in the background when launched with the command above. Scheduling controls when a task can be started; it does not run a task automatically. Refresh to update scheduled availability. Times are entered in the browser's local timezone and stored in UTC.
 
 ## Included
 
@@ -73,7 +73,7 @@ One Submission Team owns both applying and status checking. The Follow-up Team r
 
 The server enforces these prerequisites. Reopening an input is blocked if dependent work has already started; reopen dependent tasks in reverse order first. Duplicate project names are rejected case-insensitively. Task completion, reassignment, notes, and project history survive restart.
 
-**Execution boundary:** these are working coordination tools for manual tasks, not autonomous workers. Configured Greenhouse feeds and exact-CV-excerpt draft preparation are available below; model calls, document parsing, and external submission integrations are not connected. The workspace never submits an application or sends a message. Team instructions require actual evidence; the software cannot independently verify a pasted receipt or applicant approval. Leave blocked tasks open. Only mark submitted after completing the application on the real portal. Add your master CV and preferences locally; do not commit personal application data to the public repository.
+**Execution boundary:** these are working coordination tools for manual tasks, not autonomous workers. Configured Greenhouse/Lever feeds and exact-CV-excerpt draft preparation are available below; model calls, document parsing, and external submission integrations are not connected. The workspace never submits an application or sends a message. Team instructions require actual evidence; the software cannot independently verify a pasted receipt or applicant approval. Leave blocked tasks open. Only mark submitted after completing the application on the real portal. Add your master CV and preferences locally; do not commit personal application data to the public repository.
 
 ## Application status desk
 
@@ -85,7 +85,7 @@ Evidence is entered by the local user and is not independently verified. Use Unk
 
 ### Plugin integration boundary
 
-ChatGPT-connected plugins are available to the assistant in the conversation; they are not automatically installed, authenticated, or callable by this standalone Python application. GitHub is used for code and CI. Outlook Email could support reading receipts/status messages after connection; a document provider could supply the approved master CV. Authenticated runtime integrations, credential handling, and model execution are not implemented here; public Greenhouse discovery is supported. No plugin credentials or personal application records are committed to this public repository. Application teams and placement staff coordinate the workflow; adding roles does not connect external services.
+ChatGPT-connected plugins are available to the assistant in the conversation; they are not automatically installed, authenticated, or callable by this standalone Python application. GitHub is used for code and CI. Outlook Email could support reading receipts/status messages after connection; a document provider could supply the approved master CV. Authenticated runtime integrations, credential handling, and model execution are not implemented here; public Greenhouse/Lever discovery is supported. No plugin credentials or personal application records are committed to this public repository. Application teams and placement staff coordinate the workflow; adding roles does not connect external services.
 
 ## API
 
@@ -124,7 +124,7 @@ This release provides a working manual recruiting coordination system. It does n
 ## Recurring new-job discovery and CV preparation
 
 1. Create a candidate case, then select it under **New-job recruiting campaign**.
-2. Enter up to five employer Greenhouse board tokens (from their careers board URLs), target titles, approved US location phrases, verified skills, and an accurate plain-text master CV. Confirm candidate authorization and enable discovery.
+2. Enter up to five employer board tokens (plain Greenhouse tokens or lever:company), target titles, approved US location phrases, verified skills, and an accurate plain-text master CV. Confirm candidate authorization and enable discovery.
 3. Keep `python portfolio/ai-office/office.py` running. It checks due campaigns every 30 seconds, with a 15-minute interval between scans. **Check due boards now** runs due scans without bypassing this interval. Refresh the UI to see background results.
 4. The first successful scan of each board records existing openings as a baseline. Only unseen job-post IDs from later scans produce queue entries. A failed first scan never establishes a baseline. Repeated scans do not duplicate a candidate/board/job ID.
 5. Each new opening receives a draft containing relevant **exact CV excerpts and the complete unchanged master CV**, then a title/location/skill keyword screen. This is deterministic preparation, not AI rewriting or a finished ATS-optimized CV. Full employer requirements, authorization/sponsorship, seniority, salary, and application questions still require review.
@@ -230,4 +230,12 @@ Create a candidate case, then use **Three-department recruiting office** with th
 
 The first three 3D stations show these departments. Existing candidate cases and older application workflows remain supported. Submission still requires registered candidate/employer/requisition identity and the existing rejection-lesson checks.
 
-This is a coordination template with optional local AI drafting, not nine autonomous portal integrations. The active discovery implementation supports configured public Greenhouse boards only. It does not cover every job portal or automatically interpret all-US/all-software queries. Freshness must be verified from posting evidence; newly observed does not necessarily mean newly posted. Unknown fit or freshness should leave the task open. Task completion is an operator attestation, not automated factual validation. No external submission or inbox connector is active; keep submission tasks open until an actual permitted submission and receipt exist. Model drafts require review. No placement guarantee is offered.
+This is a coordination template with optional local AI drafting, not nine autonomous portal integrations. The active discovery implementation supports configured public Greenhouse and Lever boards. It does not cover every job portal or automatically interpret all-US/all-software queries. Freshness must be verified from posting evidence; newly observed does not necessarily mean newly posted. Unknown fit or freshness should leave the task open. Task completion is an operator attestation, not automated factual validation. No external submission or inbox connector is active; keep submission tasks open until an actual permitted submission and receipt exist. Model drafts require review. No placement guarantee is offered.
+
+## Lever job discovery
+
+Campaign board tokens now accept `lever:company` for an employer using Lever's global public job board API. Existing plain tokens still select Greenhouse; `greenhouse:company` is an equivalent alias. Use actual employer tokens, not these placeholder examples. Up to five boards total can be configured. Source documentation: https://github.com/lever/postings-api .
+
+Lever requests use its fixed HTTPS API host, reject redirects, and read up to ten pages of 100 postings, with a 5 MB per-response limit. Malformed responses, repeated IDs or page-limit exhaustion reject the whole source scan; partial results cannot establish a baseline. Requirements lists, work arrangement and employment type are retained in the description. No job application POST is implemented.
+
+Each source has its own first-scan baseline and ID deduplication. Newly observed does not prove newly posted; publication date and US remote eligibility still need review. Cross-portal submission deduplication continues to require the canonical employer/requisition identity. Adapter tests use fixtures; they do not demonstrate a running live employer campaign. Existing candidate data and Greenhouse keys are preserved.

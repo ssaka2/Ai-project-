@@ -5,7 +5,7 @@ The goal is accountable support from intake through a confirmed job start. Emplo
 | Stage | Accountable staff | Current implementation | Remaining work |
 | --- | --- | --- | --- |
 | Intake and preferences | Placement Manager, Candidate Intake, US Location Coordinator | Candidate cases, manually recorded consent/preferences | Private candidate accounts and structured approved profile/document storage |
-| New openings | Job Discovery | Recurring configured Greenhouse boards; first-scan baseline and per-board ID deduplication | Additional permitted feeds, cross-source identity resolution, closing-date verification |
+| New openings | Job Discovery | Recurring configured Greenhouse/Lever boards; first-scan baseline and per-board ID deduplication | Additional permitted feeds, cross-source identity resolution, closing-date verification |
 | CV and fit | CV Tailoring, Eligibility, Employer Requirements, Profile and Portfolio | Exact CV excerpt preparation, keyword screen, manual review tasks | Structured factual CV editing, document export, authenticated model adapter if desired, complete eligibility checks |
 | Quality control | Application QA, Applications Manager | Review dependencies, duplicate identity registration, rejection review and corrective checks | Secure independent approver identity, immutable versioned application packages |
 | Apply | Submission Team | Manual task, unique application record, recorded receipt/status | Authorized provider-specific submit adapter, required-answer validation, idempotent delivery and uncertain-outcome reconciliation |

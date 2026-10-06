@@ -1,4 +1,5 @@
 """Public-board discovery and fact-preserving candidate preparation; no submission adapter."""
+import lever_source
 import html
 import json
 import re
@@ -58,8 +59,7 @@ def configure(db, data, conflict):
     if type(data.get('revision')) is not int or data['revision'] != (old['revision'] if old else 0):
         raise conflict('Campaign changed. Refresh and select the candidate again.')
     boards,titles,locations,skills = (terms(data,k) for k in ('boards','titles','locations','skills'))
-    if any(not re.fullmatch(r'[a-zA-Z0-9_-]{1,80}',b) for b in boards):
-        raise ValueError('Use Greenhouse board tokens, not URLs')
+    boards = list(dict.fromkeys(normalize_board(b) for b in boards))
     if len(boards)>5:
         raise ValueError('Maximum five employer boards per campaign')
     resume = data.get('resume')
@@ -82,15 +82,27 @@ class NoRedirect(HTTPRedirectHandler):
         raise ValueError('Board redirected; source review required')
 
 
-def fetch_board(board):
-    if not re.fullmatch(r'[a-zA-Z0-9_-]{1,80}',board):
-        raise ValueError('Invalid board token')
-    request = Request(f'https://boards-api.greenhouse.io/v1/boards/{board}/jobs?content=true',headers={'User-Agent':'AI-Office/1.0','Accept':'application/json'})
+def normalize_board(board):
+    if not isinstance(board,str) or not re.fullmatch(r'(?:(?:greenhouse|lever):)?[a-zA-Z0-9_-]{1,80}',board):
+        raise ValueError('Use a Greenhouse token or lever:company, not a URL')
+    # Preserve old Greenhouse database keys; aliases cannot create a second queue.
+    return board.removeprefix('greenhouse:')
+
+
+def read_json(url):
+    request = Request(url,headers={'User-Agent':'AI-Office/1.0','Accept':'application/json'})
     with build_opener(NoRedirect).open(request,timeout=15) as response:
         raw = response.read(5_000_001)
     if len(raw)>5_000_000:
         raise ValueError('Board response exceeds size limit')
-    body = json.loads(raw)
+    return json.loads(raw)
+
+
+def fetch_board(board):
+    board = normalize_board(board)
+    if board.startswith('lever:'):
+        return lever_source.fetch(board.split(':',1)[1],read_json)
+    body = read_json(f'https://boards-api.greenhouse.io/v1/boards/{board}/jobs?content=true')
     if not isinstance(body,dict) or not isinstance(body.get('jobs'),list) or len(body['jobs'])>10000:
         raise ValueError('Invalid or oversized board response')
     jobs=[]
