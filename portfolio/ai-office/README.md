@@ -217,3 +217,17 @@ The office map uses CSS perspective and raised station cards to show ten workflo
 With no candidate selected, the view is a blueprint, not simulated activity. Stage counts reflect saved task completion, never proof of submission, an interview, or placement. The diagram groups template tasks by their titles; custom standalone tasks are available on the board and are not automatically classified into stations. Up to 15 matching tasks appear in the stage detail. Default station leads are shown when no tasks are assigned; otherwise the actual owners are listed.
 
 Keyboard-operable station buttons expose selection with `aria-pressed`. A flat-view toggle is available; mobile and reduced-motion layouts remove perspective automatically. The scene is a stylized 3D workflow, not a free-orbit virtual office or animated employee simulation. Browser verification covers station selection, candidate scoping, rejection details, task navigation, toggling, and mobile overflow.
+
+## Three-department recruiting workflow
+
+Create a candidate case, then use **Three-department recruiting office** with the original HTTPS job URL and full job description. This creates ten dependent tasks assigned to nine staff:
+
+| Department | Staff | Output |
+| --- | --- | --- |
+| 01 Source jobs | Job Feed Collector; US Software Job Screener; Job Freshness and Duplicate Checker | Verified source, US software scope, posting freshness and duplicate check |
+| 02 Tailor documents | CV Tailoring Team; Portfolio Tailoring Team; Cover Letter Team | Three independent drafts from verified candidate facts and the same job description |
+| 03 Match, finalize & apply | Eligibility Team; Application QA Team; Submission Team | Fit review after all drafts, approved package, real submission evidence and status follow-up |
+
+The first three 3D stations show these departments. Existing candidate cases and older application workflows remain supported. Submission still requires registered candidate/employer/requisition identity and the existing rejection-lesson checks.
+
+This is a coordination template with optional local AI drafting, not nine autonomous portal integrations. The active discovery implementation supports configured public Greenhouse boards only. It does not cover every job portal or automatically interpret all-US/all-software queries. Freshness must be verified from posting evidence; newly observed does not necessarily mean newly posted. Unknown fit or freshness should leave the task open. Task completion is an operator attestation, not automated factual validation. No external submission or inbox connector is active; keep submission tasks open until an actual permitted submission and receipt exist. Model drafts require review. No placement guarantee is offered.

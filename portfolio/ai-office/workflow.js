@@ -1,12 +1,12 @@
 'use strict';
 // View only: these stages never submit applications or advance tasks.
 const officeStages = [
-  ['Intake','Candidate Intake Team','01', ['Complete candidate intake','Set application preferences'],'Record consent, verified facts, and target roles.'],
-  ['Profile & fit','Profile and Portfolio Team','02',['Confirm US location preferences','Map employer requirements','Prepare the candidate profile','Prepare the skills and interview plan','Check eligibility and job fit'],'Confirm preferences, compare employer requirements, and prepare factual profile content.'],
-  ['Discover','Job Discovery Team','03',['Build the linked application pipeline','Discover and verify an opening'],'Configured boards → unseen openings → duplicate checks. Discovery entries are not applications.'],
-  ['Tailor CV','CV Tailoring Team','04',['Prepare the tailored CV','Prepare the cover letter'],'Prepare a role-specific draft using verified candidate facts. AI output requires review.'],
-  ['Quality review','Application QA Team','05',['Review application and obtain approval'],'Check the exact package, applicant approval, duplicate identity, and rejection lessons.'],
-  ['Apply & track','Submission Team','06',['Submit and record the outcome','Track response and follow-up','Review the active application campaign','Review the application report'],'Record actual submission evidence and observed status. External submission is not connected.'],
+  ['Source jobs','Job Feed Collector · US Software Job Screener · Job Freshness and Duplicate Checker','01',['Collect a newly posted opening','Verify US software job scope','Verify freshness and duplicates','Discover and verify an opening','Build the linked application pipeline'],'Three staff verify source evidence, US software scope, freshness and duplicate identity. Only connected sources are scanned.'],
+  ['Tailor documents','CV Tailoring Team · Portfolio Tailoring Team · Cover Letter Team','02',['Prepare the tailored CV','Prepare the tailored portfolio','Prepare the cover letter'],'Three staff prepare CV, portfolio and cover letter against the same job description and verified candidate facts.'],
+  ['Match, finalize & apply','Eligibility Team · Application QA Team · Submission Team','03',['Filter and finalize job match','Check eligibility and job fit','Review application and obtain approval','Submit and record the outcome'],'Filter for candidate fit, review all three documents, obtain approval, then submit through a permitted channel. No external submission connector is active.'],
+  ['Candidate intake','Candidate Intake Team','04',['Complete candidate intake','Set application preferences'],'Prerequisite candidate setup: consent, verified facts and target roles.'],
+  ['Profile preparation','Profile and Portfolio Team','05',['Confirm US location preferences','Map employer requirements','Prepare the candidate profile','Prepare the skills and interview plan'],'Maintain verified candidate facts and preferences used by all departments.'],
+  ['Track applications','Submission Team','06',['Track response and follow-up','Review the active application campaign','Review the application report'],'Record real receipts, observed status and next checks.'],
   ['Learn & retry','Applications Manager','07',[],'Rejected → review evidence → corrective check → return to fit and tailoring. Unknown rejection reasons stay unknown.'],
   ['Interview','Interview Coaching Team','08',['Coordinate interviews and feedback'],'Prepare for actual invitations and track outcomes. Discovery continues during interviews.'],
   ['Offer & start','Onboarding Team','09',['Review a written offer with the candidate','Record the candidate offer decision','Coordinate onboarding and confirm job start'],'Candidate decides on the offer. Accepted and actually started are separate recorded outcomes.'],
@@ -47,7 +47,7 @@ function renderWorkflowDetail(scope) {
   if(selectedOfficeStage===6){
     const rejected=(state.checks || []).filter(c=>scope.projects.has(c.project) && c.status==='rejected' && (state.checks || []).find(x=>x.project===c.project)?.id===c.id);
     const pending=rejected.filter(c=>!(state.rejection_reviews || []).some(r=>r.check_id===c.id));
-    panel.append(el('p',`${pending.length} rejection review(s) pending. Return to Profile & fit, then Tailor CV and Quality review before the next submission.`));
+    panel.append(el('p',`${pending.length} rejection review(s) pending. Return to Tailor documents, then Match, finalize & apply before the next submission.`));
   }
   for(const task of tasks.slice(0,15)){
     const waiting=(state.dependencies || []).filter(d=>d.task===task.id).filter(d=>state.tasks.find(t=>t.id===d.prerequisite)?.status!=='done').length;

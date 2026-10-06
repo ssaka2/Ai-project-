@@ -199,6 +199,17 @@ def main():
                 assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth'), 'Workflow mobile overflow'
                 page.get_by_label('Workflow candidate', exact=True).select_option('')
                 expect(page.locator('#workflow-detail')).to_contain_text('blueprint does not represent live work')
+                form=page.locator('#recruiting-form')
+                form.locator('[name=name]').fill('Three department test')
+                form.locator('[name=candidate]').select_option(label='Synthetic placement case')
+                form.locator('[name=source_url]').fill('https://example.com/jobs/123')
+                form.locator('[name=description]').fill('Software engineer, US remote. Verified test description.')
+                form.get_by_role('button').click()
+                expect(page.locator('#projects')).to_contain_text('Three department test')
+                page.get_by_label('Workflow candidate', exact=True).select_option(label='Synthetic placement case')
+                page.locator('.office-station').filter(has=page.get_by_text('Tailor documents', exact=True)).click()
+                expect(page.locator('#workflow-detail')).to_contain_text('Portfolio Tailoring Team')
+                expect(page.locator('#workflow-detail')).to_contain_text('Prepare the tailored portfolio')
                 assert not errors, errors
                 browser.close()
                 print('Chromium: agent creation, task lifecycle, reload persistence, search, mobile layout passed.')

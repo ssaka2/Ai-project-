@@ -69,7 +69,7 @@ function render() {
   $('summary').replaceChildren();
   const due = state.tasks.filter(t => t.status === 'queued' && t.due && new Date(t.due) <= new Date()).length;
   for(const [label, count] of [['All tasks',state.tasks.length],['In progress',state.tasks.filter(t => t.status==='active').length],['Awaiting review',state.tasks.filter(t => t.status==='review').length],['Scheduled & ready',due]]) {const c=el('div',undefined,'stat'); c.append(el('strong',String(count)),el('span',label)); $('summary').append(c);}
-  for(const [id,kind] of [['identity-project','job-application'],['identity-candidate','candidate-placement']]) {const select=$(id),choice=select.value;select.replaceChildren();const empty=el('option','Choose a record');empty.value='';select.append(empty);for(const p of state.projects || []) if(p.kind===kind){const o=el('option',p.name);o.value=p.id;select.append(o);}select.value=choice;}
+  for(const [id,kind] of [['recruiting-candidate','candidate-placement'],['identity-project','job-application'],['identity-candidate','candidate-placement']]) {const select=$(id),choice=select.value;select.replaceChildren();const empty=el('option','Choose a record');empty.value='';select.append(empty);for(const p of state.projects || []) if(p.kind===kind){const o=el('option',p.name);o.value=p.id;select.append(o);}select.value=choice;}
   renderLearning();
   if(typeof renderWorkflow==='function')renderWorkflow();
   renderChat();
@@ -207,3 +207,5 @@ function renderLearning() {
 $('lesson-form').onsubmit=async(e)=>{e.preventDefault();const f=e.target,b=f.querySelector('button');b.disabled=true;try{await save('/api/rejection-review',{check_id:Number(f.elements.check_id.value),owner:Number(f.elements.owner.value),basis:f.elements.basis.value,reason:f.elements.reason.value,corrective_action:f.elements.corrective_action.value});f.reset();}catch(err){report(err.message,true);}finally{b.disabled=false;}};
 $('preflight-project').onchange=()=>{const p=(state.projects || []).find(p=>String(p.id)===$('preflight-project').value);$('preflight-form').elements.review_revision.value=(state.rejection_reviews || []).find(r=>r.candidate===p?.candidate)?.id || 0;};
 $('preflight-form').onsubmit=async(e)=>{e.preventDefault();const f=e.target,b=f.querySelector('button');b.disabled=true;try{await save('/api/application-preflight',{project:Number(f.elements.project.value),owner:Number(f.elements.owner.value),review_revision:Number(f.elements.review_revision.value),evidence:f.elements.evidence.value});f.reset();}catch(err){report(err.message,true);}finally{b.disabled=false;}};
+
+$('recruiting-form').onsubmit=async(e)=>{e.preventDefault();const f=e.target;try{await save('/api/recruiting-project',{name:f.elements.name.value,candidate:Number(f.elements.candidate.value),source_url:f.elements.source_url.value,description:f.elements.description.value});f.reset();}catch(err){report(err.message,true);}};
