@@ -216,3 +216,14 @@ $('preflight-project').onchange=()=>{const p=(state.projects || []).find(p=>Stri
 $('preflight-form').onsubmit=async(e)=>{e.preventDefault();const f=e.target,b=f.querySelector('button');b.disabled=true;try{await save('/api/application-preflight',{project:Number(f.elements.project.value),owner:Number(f.elements.owner.value),review_revision:Number(f.elements.review_revision.value),evidence:f.elements.evidence.value});f.reset();}catch(err){report(err.message,true);}finally{b.disabled=false;}};
 
 $('recruiting-form').onsubmit=async(e)=>{e.preventDefault();const f=e.target;try{await save('/api/recruiting-project',{name:f.elements.name.value,candidate:Number(f.elements.candidate.value),source_url:f.elements.source_url.value,description:f.elements.description.value});f.reset();}catch(err){report(err.message,true);}};
+
+$('check-readiness').onclick=async()=>{
+  const button=$('check-readiness'),panel=$('readiness-result');button.disabled=true;
+  panel.textContent='Checking local model availability…';
+  try{
+    const result=await request('/api/readiness',{});
+    panel.replaceChildren(el('strong',result.status.replaceAll('_',' ')),el('p',result.message),el('p',`Checked ${new Date(result.checked_at).toLocaleString()}`));
+    if(result.model)panel.append(el('p',`Configured model: ${result.model}`));
+  }catch(error){panel.textContent=`Check failed: ${error.message}`;}
+  finally{button.disabled=false;}
+};

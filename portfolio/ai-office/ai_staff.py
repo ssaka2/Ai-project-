@@ -81,3 +81,36 @@ def draft(office,data,clock,provider=None):
             db.execute('INSERT INTO events(task,message,created) VALUES (?,?,?)',(task_id,'AI draft saved separately; task status unchanged',clock()))
         return office.snapshot()
     finally:LOCK.release()
+
+
+def readiness():
+    """Read-only local model inventory check; never downloads or runs a model."""
+    base = {'generation_verified': False, 'automatic_submission': False, 'inbox_tracking': False}
+    try:
+        model = model_name()
+    except ValueError:
+        return dict(base,status='not_configured',message='Set AI_OFFICE_MODEL to an installed Ollama model, then restart the office.')
+    base['model'] = model
+    try:
+        request = Request('http://127.0.0.1:11434/api/tags',headers={'Accept':'application/json'})
+        with build_opener(ProxyHandler({}),NoRedirect()).open(request,timeout=3) as response:
+            raw = response.read(250001)
+    except Exception:
+        return dict(base,status='unreachable',message='Cannot read the local Ollama model inventory. Start Ollama on this computer and check again.')
+    try:
+        if len(raw)>250000:
+            raise ValueError('Oversized inventory')
+        body = json.loads(raw)
+        if not isinstance(body,dict) or not isinstance(body.get('models'),list):
+            raise ValueError('Invalid inventory')
+        names = []
+        for item in body['models']:
+            if not isinstance(item,dict) or not isinstance(item.get('name'),str):
+                raise ValueError('Invalid model entry')
+            names.append(item['name'])
+    except (ValueError,TypeError):
+        return dict(base,status='invalid_response',message='Ollama returned an invalid model inventory. Check the local service.')
+    expected = model if ':' in model.rsplit('/',1)[-1] else model+':latest'
+    if model not in names and expected not in names:
+        return dict(base,status='model_missing',message='Configured model is absent from Ollama. Install it locally or select an installed model, then restart the office.')
+    return dict(base,status='model_available',message='Configured model is listed locally. Generate and review a draft to test inference; this check does not prove generation works.')

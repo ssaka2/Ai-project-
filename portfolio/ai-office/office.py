@@ -499,6 +499,8 @@ def make_server(path, port=4521):
                 data = json.loads(self.rfile.read(length))
                 if not isinstance(data,dict):
                     raise ValueError('JSON object required')
+                if self.path == '/api/readiness':
+                    return self.send(200, dict(ai_staff.readiness(),checked_at=utcnow()))
                 if self.path == '/api/ai-draft':
                     return self.send(200, ai_staff.draft(office,data,utcnow))
                 if self.path == '/api/discover':

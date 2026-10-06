@@ -245,3 +245,9 @@ Each source has its own first-scan baseline and ID deduplication. Newly observed
 Keyword-matched new-job queue entries now have **Create workflow from this opening**. This copies the stored candidate link, complete description, URL, source location and first-observed timestamp into the nine-staff, ten-task workflow. It never marks freshness, fit, approval or submission as verified.
 
 A transactional source-to-project link prevents duplicate workflow creation from repeated clicks or concurrent requests. Existing links remain visible after restart. Baseline, filtered and outdated `needs_review` entries cannot be promoted; stopped candidate searches are blocked. This is source-record deduplication: cross-portal applications still require canonical employer/requisition registration before submission. No applications are sent by this action.
+
+## Office readiness check
+
+Use **Check AI readiness** to distinguish missing configuration, unreachable Ollama, a missing model, invalid inventory, and a locally listed model. The check uses Ollama's documented `GET /api/tags` endpoint on `127.0.0.1:11434`, disables proxies/redirects, times out after three seconds and caps the response at 250 KB. It is exposed through the office's token-protected `POST /api/readiness` route.
+
+The check never generates text, downloads a model or changes tasks. A listed model does not prove inference works: start a task and generate a draft to verify that separately. Job source access requires a real campaign scan. Automatic submission and inbox tracking remain unconnected. API reference: https://github.com/ollama/ollama/blob/main/docs/api.md .
