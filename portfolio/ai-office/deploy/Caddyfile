@@ -1,0 +1,20 @@
+# One trusted operator only. This is not a multi-candidate sign-in system.
+# Required env: AI_OFFICE_DOMAIN, AI_OFFICE_OPERATOR, AI_OFFICE_PASSWORD_HASH.
+https://{$AI_OFFICE_DOMAIN} {
+    route {
+        basic_auth {
+            {$AI_OFFICE_OPERATOR} {$AI_OFFICE_PASSWORD_HASH}
+        }
+        @foreign_origin {
+            header Origin *
+            not header Origin https://{$AI_OFFICE_DOMAIN}
+        }
+        respond @foreign_origin "Cross-origin requests are not allowed" 403
+        reverse_proxy 127.0.0.1:4521 {
+            header_up Host 127.0.0.1:4521
+            # Only strip Origin after the exact-origin check above.
+            header_up -Origin
+            header_up -Authorization
+        }
+    }
+}
