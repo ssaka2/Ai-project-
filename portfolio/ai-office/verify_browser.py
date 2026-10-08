@@ -226,6 +226,33 @@ def main():
                 expect(page.locator('#job-queue')).to_contain_text('Linked application project #')
                 assert len(office.snapshot()['recruiting_workflows'])==1
                 assert not errors, errors
+                # Static hosting often serves an HTML fallback at API URLs.
+                page.route('**/api/state', lambda route: route.fulfill(status=200, content_type='text/html', body='<html>Static preview</html>'))
+                page.reload()
+                expect(page.locator('#connection-title')).to_have_text('Backend unavailable')
+                expect(page.locator('#connection-detail')).to_contain_text('static hosting')
+                expect(page.get_by_role('button', name='Create task', exact=True)).to_be_disabled()
+                expect(page.locator('#export-workspace')).to_be_hidden()
+                page.unroute('**/api/state')
+                page.get_by_role('button', name='Retry connection', exact=True).click()
+                expect(page.locator('#connection-title')).to_have_text('Backend connected')
+                expect(page.get_by_role('button', name='Create task', exact=True)).to_be_enabled()
+                expect(page.locator('#export-workspace')).to_be_visible()
+                # Reject JSON from an unrelated service, not just HTML fallbacks.
+                page.route('**/api/state', lambda route: route.fulfill(status=200, content_type='application/json', body='{}'))
+                page.reload()
+                expect(page.locator('#connection-detail')).to_contain_text('not an AI Office workspace')
+                expect(page.get_by_role('button', name='Create task', exact=True)).to_be_disabled()
+                page.unroute('**/api/state')
+                page.get_by_role('button', name='Retry connection', exact=True).click()
+                expect(page.locator('#connection-title')).to_have_text('Backend connected')
+                page.route('**/api/state', lambda route: route.abort())
+                page.get_by_role('button', name='Refresh', exact=True).click()
+                expect(page.locator('#connection-title')).to_have_text('Backend unavailable')
+                page.unroute('**/api/state')
+                page.get_by_role('button', name='Retry connection', exact=True).click()
+                expect(page.locator('#connection-title')).to_have_text('Backend connected')
+                assert not errors, errors
                 browser.close()
                 print('Chromium: agent creation, task lifecycle, reload persistence, search, mobile layout passed.')
         finally:

@@ -8,14 +8,52 @@ let agentById = new Map(), workload = new Map();
 const $ = (id) => document.getElementById(id);
 function el(tag, text, cls) { const n = document.createElement(tag); if(text !== undefined) n.textContent = text; if(cls) n.className = cls; return n; }
 function report(text, error = false) { $('message').textContent = text; $('message').className = error ? 'error' : ''; }
+let connected = false;
+function connection(ready, detail) {
+  connected = ready;
+  $('workspace-controls').disabled = !ready;
+  $('export-workspace').hidden = !ready;
+  $('connection-title').textContent = ready ? 'Backend connected' : 'Backend unavailable';
+  $('connection-detail').textContent = detail;
+  $('connection-help').hidden = ready;
+}
 async function request(path, data) {
-  const response = await fetch(path, data ? {method: 'POST', headers: {'Content-Type': 'application/json', 'X-Office-Token': token}, body: JSON.stringify(data)} : {});
-  const body = await response.json(); if(!response.ok) throw new Error(body.error || 'Request failed'); return body;
+  if(location.protocol === 'file:') throw new Error('Opened as a file. Start the Python server to use the workspace.');
+  const controller = new AbortController();
+  const timer = setTimeout(()=>controller.abort(), path === '/api/state' ? 10000 : 180000);
+  try {
+    const response = await fetch(path, {signal:controller.signal, cache:'no-store', ...(data ? {method: 'POST', headers: {'Content-Type': 'application/json', 'X-Office-Token': token}, body: JSON.stringify(data)} : {})});
+    if(!(response.headers.get('content-type') || '').includes('application/json'))
+      throw new Error('This host is not serving the AI Office API. Start the Python server; static hosting cannot run this workspace.');
+    const body = await response.json();
+    if(!response.ok) throw new Error(body.error || `Request failed (${response.status})`);
+    return body;
+  } catch(error) {
+    if(error.name === 'AbortError' || error instanceof TypeError) {
+      connection(false, 'Connection lost. Keep the Python server running, then retry. Unsaved notes remain in this tab.');
+      throw new Error(data ? 'Connection interrupted. The action may have completed. Retry connection and check the workspace before submitting again.' : 'Cannot reach the Python backend. Start it and retry connection.');
+    }
+    throw error;
+  } finally {clearTimeout(timer);}
 }
 let loadSequence=0;
-async function load() { if(saving) return; const sequence=++loadSequence; try {const loaded = await request('/api/state'); if(saving || sequence!==loadSequence) return; state=loaded; token=state.token; render(); report('Workspace up to date.');} catch(e) {if(sequence===loadSequence) report(e.message, true);} }
+async function load() {
+  if(saving) return;
+  const sequence=++loadSequence;
+  try {
+    const loaded = await request('/api/state');
+    if(saving || sequence!==loadSequence) return;
+    if(!loaded || !Array.isArray(loaded.agents) || !Array.isArray(loaded.tasks) || !Array.isArray(loaded.events) || typeof loaded.token !== 'string' || !loaded.token)
+      throw new Error('The server response is not an AI Office workspace. Check the server address.');
+    state=loaded; token=state.token; render();
+    connection(true, 'Python API and workspace loaded. Discovery requires a configured campaign; AI drafts require a local model. Submission and inbox tracking are not connected.');
+    report('Workspace up to date.');
+  } catch(e) {if(sequence===loadSequence) {connection(false,e.message);report(e.message, true);}}
+}
+$('retry-connection').onclick=load;
 let saving = false;
 async function save(path, data) {
+  if(!connected) throw new Error('Connect to the Python backend before saving.');
   if(saving) throw new Error('A save is in progress. Please wait.');
   saving = true; ++loadSequence; clearTimeout(searchTimer);
   const controls = [...document.querySelectorAll('form input, form textarea, form select, form button, #board input, #board textarea, #board select, #board button, #refresh, #search, #project-filter, #discover, #projects button, #agents button')].map(node=>[node,node.disabled]);

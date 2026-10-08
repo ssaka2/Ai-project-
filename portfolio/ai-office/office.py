@@ -1,5 +1,6 @@
 """Original local task office. Python 3.11+, no third-party runtime dependencies."""
 import argparse
+import webbrowser
 import json
 import secrets
 import threading
@@ -526,12 +527,15 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--db', default=str(ROOT / 'office.sqlite3'))
     parser.add_argument('--port', default=4521, type=int)
+    parser.add_argument('--open', action='store_true', help='Open the local workspace in your browser')
     args = parser.parse_args()
     server = make_server(args.db, args.port)
     stop = threading.Event()
     watcher = threading.Thread(target=recruiting.worker, args=(Office(args.db), stop), daemon=True)
     watcher.start()
     print(f'AI Office: http://127.0.0.1:{server.server_port}', flush=True)
+    if args.open:
+        threading.Thread(target=webbrowser.open, args=(f'http://127.0.0.1:{server.server_port}',), daemon=True).start()
     try:
         server.serve_forever()
     except KeyboardInterrupt:

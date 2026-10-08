@@ -7,10 +7,14 @@ An original local workspace for planning and reviewing agent-assisted work. Buil
 Requires Python 3.11 or newer. No runtime packages, build step, API key, or paid account.
 
 ```sh
-python portfolio/ai-office/office.py
+python portfolio/ai-office/office.py --open
 ```
 
-Open http://127.0.0.1:4521 on the same computer. On Windows, `py` can replace `python`.
+The command starts the Python API, SQLite workspace, and discovery worker and opens http://127.0.0.1:4521 on the same computer. Keep the process running. Omit `--open` on a headless server.
+
+**Static hosting is not a running office.** GitHub source pages, GitHub Pages, and opening `index.html` cannot execute the Python backend. The UI now checks for a valid API response, disables workspace controls while disconnected, and offers Retry connection. Relative asset URLs allow this explanation to load in a subdirectory preview. A phone cannot access a different computer using its own localhost address. The Azure pilot is currently deallocated; no live public office is available. Public multi-user hosting still requires authentication, TLS, and a production deployment.
+
+ On Windows, `py` can replace `python`.
 
 1. Add or edit a named agent role and its instructions.
 2. Create a task with a brief, assigned role, and optional scheduled start.
@@ -18,7 +22,7 @@ Open http://127.0.0.1:4521 on the same computer. On Windows, `py` can replace `p
 4. Review the result, then approve completion or send it back for revision.
 5. Search the board or export the workspace as JSON.
 
-Agents are **roles for manual planning**, not autonomous AI processes. You perform the work and paste results into the board. No model generation or external submission is connected. Configured Greenhouse/Lever discovery runs in the background when launched with the command above. Scheduling controls when a task can be started; it does not run a task automatically. Refresh to update scheduled availability. Times are entered in the browser's local timezone and stored in UTC.
+Agents are **roles for manual planning**, not autonomous AI processes. You perform the work and paste results into the board. Optional local Ollama draft generation is supported; external submission is not connected. Configured Greenhouse/Lever discovery runs in the background when launched with the command above. Scheduling controls when a task can be started; it does not run a task automatically. Refresh to update scheduled availability. Times are entered in the browser's local timezone and stored in UTC.
 
 ## Included
 
@@ -73,7 +77,7 @@ One Submission Team owns both applying and status checking. The Follow-up Team r
 
 The server enforces these prerequisites. Reopening an input is blocked if dependent work has already started; reopen dependent tasks in reverse order first. Duplicate project names are rejected case-insensitively. Task completion, reassignment, notes, and project history survive restart.
 
-**Execution boundary:** these are working coordination tools for manual tasks, not autonomous workers. Configured Greenhouse/Lever feeds and exact-CV-excerpt draft preparation are available below; model calls, document parsing, and external submission integrations are not connected. The workspace never submits an application or sends a message. Team instructions require actual evidence; the software cannot independently verify a pasted receipt or applicant approval. Leave blocked tasks open. Only mark submitted after completing the application on the real portal. Add your master CV and preferences locally; do not commit personal application data to the public repository.
+**Execution boundary:** these are working coordination tools for manual tasks, not autonomous workers. Configured Greenhouse/Lever feeds and exact-CV-excerpt draft preparation are available below; optional local model calls are supported, but document parsing and external submission integrations are not connected. The workspace never submits an application or sends a message. Team instructions require actual evidence; the software cannot independently verify a pasted receipt or applicant approval. Leave blocked tasks open. Only mark submitted after completing the application on the real portal. Add your master CV and preferences locally; do not commit personal application data to the public repository.
 
 ## Application status desk
 
@@ -103,7 +107,7 @@ POST requests require JSON and the `X-Office-Token` from `/api/state`. Stale ver
 
 ## Limits
 
-Designed for one trusted local user. No accounts, TLS, public hosting, auto-refresh, task deletion, recurring task execution, model integration, or independent approver identity. Do not expose the server publicly or tunnel it to the internet. Search, board refresh, pagination, and unrelated saves preserve pending notes and assignments in memory. Reloading/closing the browser loses unsaved edits. Stale drafts retain their original version and cannot overwrite a newer task; copy their contents before using Discard local edits. The API still transfers a full task snapshot, so this is not a server-paginated solution for very large datasets. Agent edits use last-write-wins; task results use version checks. The standard-library HTTP server is for local development, not production hosting.
+Designed for one trusted local user. No accounts, TLS, public hosting, auto-refresh, task deletion, recurring task execution, or independent approver identity. Do not expose the server publicly or tunnel it to the internet. Search, board refresh, pagination, and unrelated saves preserve pending notes and assignments in memory. Reloading/closing the browser loses unsaved edits. Stale drafts retain their original version and cannot overwrite a newer task; copy their contents before using Discard local edits. The API still transfers a full task snapshot, so this is not a server-paginated solution for very large datasets. Agent edits use last-write-wins; task results use version checks. The standard-library HTTP server is for local development, not production hosting.
 
 
 ## US software candidate placement office
