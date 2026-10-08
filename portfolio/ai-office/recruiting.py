@@ -10,6 +10,14 @@ from datetime import datetime, timezone, timedelta
 from urllib.request import Request, build_opener, HTTPRedirectHandler
 
 LOCK = threading.Lock()
+GREENHOUSE_MAX_BYTES = 20_000_000
+DEFAULT_MAX_BYTES = 5_000_000
+
+
+class BoardSizeError(ValueError):
+    """A complete source response could not fit within the bounded read."""
+
+
 STOP_STATES = ('accepted', 'started', 'paused', 'withdrawn')
 
 
@@ -95,12 +103,12 @@ def normalize_board(board):
     return board.removeprefix('greenhouse:')
 
 
-def read_json(url):
+def read_json(url, *, max_bytes=DEFAULT_MAX_BYTES):
     request = Request(url,headers={'User-Agent':'AI-Office/1.0','Accept':'application/json'})
     with build_opener(NoRedirect).open(request,timeout=15) as response:
-        raw = response.read(5_000_001)
-    if len(raw)>5_000_000:
-        raise ValueError('Board response exceeds size limit')
+        raw = response.read(max_bytes + 1)
+    if len(raw)>max_bytes:
+        raise BoardSizeError('Board response exceeds size limit')
     return json.loads(raw)
 
 
@@ -108,7 +116,7 @@ def fetch_board(board):
     board = normalize_board(board)
     if board.startswith('lever:'):
         return lever_source.fetch(board.split(':',1)[1],read_json)
-    body = read_json(f'https://boards-api.greenhouse.io/v1/boards/{board}/jobs?content=true')
+    body = read_json(f'https://boards-api.greenhouse.io/v1/boards/{board}/jobs?content=true', max_bytes=GREENHOUSE_MAX_BYTES)
     if not isinstance(body,dict) or not isinstance(body.get('jobs'),list) or len(body['jobs'])>10000:
         raise ValueError('Invalid or oversized board response')
     jobs=[]
@@ -191,7 +199,7 @@ def scan(office, fetcher=fetch_board):
                         db.execute('INSERT OR IGNORE INTO recruiting_baselines VALUES (?,?,?)',(campaign['candidate'],board,now()))
                 except Exception as exc:
                     # Avoid returning third-party content, URLs or credentials in errors.
-                    errors.append(f'{board}: {type(exc).__name__}; retry next cycle')
+                    errors.append(f'{board}: source exceeds response limit; no partial jobs saved. Source adapter review required.' if isinstance(exc, BoardSizeError) else f'{board}: {type(exc).__name__}; retry next cycle')
             if not attempted:
                 continue
             with closing(office.connect()) as db, db:

@@ -149,5 +149,31 @@ class RecruitingTests(unittest.TestCase):
         self.assertIn('C# APIs',jobs[0]['description'])
         self.assertNotIn('<p>',jobs[0]['description'])
 
+    def test_large_greenhouse_feed_and_bounded_rejection(self):
+        from io import BytesIO
+        item={'id':1,'internal_job_id':2,'title':'Engineer','location':{'name':'US'},
+              'absolute_url':'https://example.com/1','content':'C# ' + 'x'*5_100_000}
+        payload=json.dumps({'jobs':[item]}).encode()
+        with patch('recruiting.build_opener') as opener:
+            opener.return_value.open.return_value=BytesIO(payload)
+            jobs=recruiting.fetch_board('example')
+            self.assertEqual(len(jobs),1)
+            self.assertEqual(len(jobs[0]['description']),50000)
+            opener.return_value.open.return_value=BytesIO(payload)
+            with self.assertRaises(recruiting.BoardSizeError):
+                recruiting.read_json('https://api.lever.co/v0/postings/example')
+            opener.return_value.open.return_value=BytesIO(b' '*(recruiting.GREENHOUSE_MAX_BYTES+1))
+            with self.assertRaises(recruiting.BoardSizeError):
+                recruiting.fetch_board('example')
+
+    def test_oversized_feed_does_not_advance_baseline(self):
+        def oversized(board): raise recruiting.BoardSizeError('untrusted source text')
+        recruiting.scan(self.app,oversized)
+        snapshot=self.app.snapshot()
+        self.assertEqual(snapshot['job_queue'],[])
+        self.assertIn('no partial jobs saved',snapshot['campaigns'][0]['error'])
+        self.assertNotIn('untrusted',snapshot['campaigns'][0]['error'])
+        self.assertEqual(self.scan([self.job])[0]['outcome'],'baseline')
+
 
 if __name__=='__main__':unittest.main()

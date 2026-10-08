@@ -259,3 +259,7 @@ The check never generates text, downloads a model or changes tasks. A listed mod
 ## Private always-on pilot
 
 See [the Linux/Azure deployment guide](deploy/README.md) for a restricted systemd service and SSH-only access. Run `python3 verify_pilot.py` on the host to detect missing dependencies, then use `--test-model --board ACTUAL_EMPLOYER_TOKEN` for a synthetic inference and live feed checks. A successful connectivity check is not certification of staffing readiness. No VM is provisioned by these files.
+
+### Large employer feeds
+
+Greenhouse responses including job descriptions now have a bounded 20 MB response limit; Lever pages retain their 5 MB limit. Responses above the limit fail the complete source scan without advancing its baseline or saving partial jobs. The campaign reports the size-limit blocker explicitly. Stored descriptions remain limited to 50,000 characters per opening. Regression tests cover feeds above the former 5 MB limit, oversized rejection, and baseline recovery. On October 8, 2026, a read-only live check of the previously failing Anthropic Greenhouse feed retrieved 648 postings. This confirms feed retrieval only; it does not mean those openings match a candidate or that any applications were sent.
