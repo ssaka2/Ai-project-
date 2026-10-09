@@ -108,8 +108,9 @@ public class BrowserWorkflowTests
             await page.GetByLabel("Base resume").SelectOptionAsync(new SelectOptionValue { Label = "Browser base" });
             await page.GetByLabel("Job", new() { Exact = true }).SelectOptionAsync(new SelectOptionValue { Label = "Browser developer — Example" });
             await page.GetByRole(AriaRole.Button, new() { Name = "Create editable draft" }).ClickAsync();
-            // The editor is our readiness signal; unrelated load events can stall Firefox.
-            await page.WaitForURLAsync("**/Resumes/Draft/**", new() { WaitUntil = WaitUntilState.Commit });
+            // Assert observable readiness; waiting for a lifecycle event after the
+            // redirect can time out even when the draft editor is already loaded.
+            await Expect(page).ToHaveURLAsync(new Regex(@"/Resumes/Draft/[0-9a-fA-F-]+$"), new() { Timeout = 30000 });
             await Expect(page.GetByLabel("Draft text")).ToBeVisibleAsync();
             await Expect(page.GetByLabel("Draft text")).ToHaveValueAsync("C# developer\n<script>window.resumeInjected=true</script>");
             var draftUrl = page.Url;
