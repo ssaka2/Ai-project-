@@ -1,0 +1,14 @@
+{
+  "Name": "AI Office VM Deallocator",
+  "IsCustom": true,
+  "Description": "Read power state and deallocate the single VM selected by the role assignment. Cannot start, delete, resize, or run commands.",
+  "Actions": [
+    "Microsoft.Compute/virtualMachines/read",
+    "Microsoft.Compute/virtualMachines/instanceView/read",
+    "Microsoft.Compute/virtualMachines/deallocate/action"
+  ],
+  "NotActions": [],
+  "DataActions": [],
+  "NotDataActions": [],
+  "AssignableScopes": ["/subscriptions/REPLACE_SUBSCRIPTION_ID/resourceGroups/REPLACE_RESOURCE_GROUP"]
+}
