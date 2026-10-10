@@ -45,7 +45,7 @@ python -m unittest discover -s portfolio/ai-office -v
 node --check portfolio/ai-office/app.js
 ```
 
-Sixty-six automated service/HTTP tests cover the review lifecycle, persistence after reopening the database, competing edits, timezone normalization, scheduled starts, agent changes, validation, exports, cross-origin rejection, and static assets.
+Automated service/HTTP tests cover the review lifecycle, persistence after reopening the database, competing edits, timezone normalization, scheduled starts, agent changes, validation, exports, cross-origin rejection, and static assets.
 
 Optional real browser verification:
 
@@ -202,7 +202,7 @@ Install Ollama on the computer running this office and install a model suitable 
 AI_OFFICE_MODEL='your-installed-model-name' python portfolio/ai-office/office.py
 ```
 
-Start a task, save its notes, and request the draft. Review its factual claims and use the existing result/review flow. Requests go only to `http://127.0.0.1:11434/api/generate`, with proxy use and redirects disabled, a 45-second socket timeout and a response-size cap. No model is bundled or downloaded automatically. A configured name does not prove the model is installed or responsive. Missing configuration/failures return an error without changing task state. Only one inference request runs at a time in this process. Inference may continue in Ollama after a client timeout; no automatic retry occurs.
+Start a task, save its notes, and request the draft. Review its factual claims and use the existing result/review flow. Requests go only to `http://127.0.0.1:11434/api/generate`, with proxy use and redirects disabled, a configurable socket timeout (120 seconds by default, `AI_OFFICE_GENERATION_TIMEOUT=5..150`) and a response-size cap. No model is bundled or downloaded automatically. A configured name does not prove the model is installed or responsive. Missing configuration/failures return an error without changing task state. Only one inference request runs at a time in this process. Inference may continue in Ollama after a client timeout; no automatic retry occurs.
 
 Repeated requests reuse a draft only when its task version, source-context fingerprint, model, and system instructions still match. If saved task/context changes during generation, the response is discarded. Old drafts are marked with their task version and remain in exports. Unsaved notes must be saved or discarded first. Drafting does not complete tasks, approve CVs, submit applications, read email, or guarantee employment. System instructions discourage unsupported claims, but model factual accuracy is **not guaranteed**; review remains required. No self-modifying agent or automatic model training is implemented.
 
@@ -263,3 +263,7 @@ See [the Linux/Azure deployment guide](deploy/README.md) for a restricted system
 ### Large employer feeds
 
 Greenhouse responses including job descriptions now have a bounded 20 MB response limit; Lever pages retain their 5 MB limit. Responses above the limit fail the complete source scan without advancing its baseline or saving partial jobs. The campaign reports the size-limit blocker explicitly. Stored descriptions remain limited to 50,000 characters per opening. Regression tests cover feeds above the former 5 MB limit, oversized rejection, and baseline recovery. On October 8, 2026, a read-only live check of the previously failing Anthropic Greenhouse feed retrieved 648 postings. This confirms feed retrieval only; it does not mean those openings match a candidate or that any applications were sent.
+
+### Generation failure handling
+
+Model timeouts, unavailable Ollama, missing models, rejected requests, and malformed responses now produce distinct actionable errors without exposing response bodies or candidate text. Responses reporting abnormal termination (including output-limit truncation) are rejected instead of saved. Older responses without a stop reason remain supported. Failed attempts preserve task state and release the inference lock. The timeout is a socket wait, not a guarantee of total execution time; inference can continue in Ollama after disconnection. There is no automatic retry. These paths are verified with synthetic responses, not a live-model performance guarantee.

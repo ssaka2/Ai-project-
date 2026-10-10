@@ -1,6 +1,8 @@
 import json
 import tempfile
 import unittest
+from io import BytesIO
+from urllib.error import HTTPError, URLError
 from pathlib import Path
 from unittest.mock import patch
 import office
@@ -104,3 +106,50 @@ class AIStaffTests(unittest.TestCase):
             self.assertIn('C# FACTS',prompt);self.assertNotIn('PRIVATE OTHER CV',prompt)
             return 'Fixture'
         ai_staff.draft(self.app,{'id':task['id'],'version':2},office.utcnow,provider)
+
+    def test_incomplete_generation_never_saves_and_releases_lock(self):
+        before=self.app.snapshot()['tasks']
+        for body in ({'done':True,'done_reason':'length','response':'Cut off'},
+                     {'done':False,'response':'Partial'},
+                     {'done':True,'done_reason':'error','response':'Incomplete'},
+                     {'done':True,'response':''}, ['invalid']):
+            with self.subTest(body=body), patch('ai_staff.build_opener') as factory:
+                factory.return_value.open.return_value=BytesIO(json.dumps(body).encode())
+                with self.assertRaisesRegex(ValueError,'No draft was saved'):
+                    ai_staff.draft(self.app,self.data,office.utcnow)
+                self.assertEqual(self.app.snapshot()['ai_drafts'],[])
+                self.assertEqual(self.app.snapshot()['tasks'],before)
+        with patch('ai_staff.build_opener') as factory:
+            factory.return_value.open.return_value=BytesIO(b'{"done":true,"done_reason":"stop","response":"Complete fixture"}')
+            self.assertEqual(len(ai_staff.draft(self.app,self.data,office.utcnow)['ai_drafts']),1)
+
+    def test_transport_failures_have_safe_actionable_messages(self):
+        cases=[(TimeoutError(),'timed out'),(URLError(TimeoutError()),'timed out'),
+               (URLError('private details'),'Cannot reach'),
+               (HTTPError('http://localhost',404,'private details',None,None),'not found'),
+               (HTTPError('http://localhost',500,'private details',None,None),'rejected')]
+        for error,message in cases:
+            with self.subTest(error=error),patch('ai_staff.build_opener') as factory:
+                factory.return_value.open.side_effect=error
+                with self.assertRaisesRegex(ValueError,message) as caught:
+                    ai_staff.draft(self.app,self.data,office.utcnow)
+                self.assertNotIn('private details',str(caught.exception))
+                self.assertEqual(self.app.snapshot()['ai_drafts'],[])
+
+    def test_generation_timeout_configuration(self):
+        with patch.dict('os.environ',{'AI_OFFICE_GENERATION_TIMEOUT':'90'}),patch('ai_staff.build_opener') as factory:
+            factory.return_value.open.return_value=BytesIO(b'{"done":true,"response":"fixture"}')
+            ai_staff.generate('fixture','test')
+            self.assertEqual(factory.return_value.open.call_args.kwargs['timeout'],90)
+        for invalid in ('0','151','NaN','1.5'):
+            with patch.dict('os.environ',{'AI_OFFICE_GENERATION_TIMEOUT':invalid}),patch('ai_staff.build_opener') as factory:
+                with self.assertRaisesRegex(ValueError,'5 to 150'):ai_staff.generate('fixture','test')
+                factory.assert_not_called()
+
+    def test_malformed_response_is_not_saved(self):
+        for raw in (b'not json',b'\xff',b'x'*250001):
+            with patch('ai_staff.build_opener') as factory:
+                factory.return_value.open.return_value=BytesIO(raw)
+                with self.assertRaisesRegex(ValueError,'No draft was saved'):
+                    ai_staff.draft(self.app,self.data,office.utcnow)
+                self.assertEqual(self.app.snapshot()['ai_drafts'],[])
