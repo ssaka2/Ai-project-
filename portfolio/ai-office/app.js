@@ -110,6 +110,7 @@ function render() {
   for(const [id,kind] of [['recruiting-candidate','candidate-placement'],['identity-project','job-application'],['identity-candidate','candidate-placement']]) {const select=$(id),choice=select.value;select.replaceChildren();const empty=el('option','Choose a record');empty.value='';select.append(empty);for(const p of state.projects || []) if(p.kind===kind){const o=el('option',p.name);o.value=p.id;select.append(o);}select.value=choice;}
   renderLearning();
   if(typeof renderWorkflow==='function')renderWorkflow();
+  if(typeof renderWorkerChoices==='function')renderWorkerChoices();
   renderChat();
   renderRecruiting();
   renderBoard(); $('events').replaceChildren();

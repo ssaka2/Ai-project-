@@ -32,6 +32,11 @@ function renderWorkflow() {
     card.append(el('span',stage[2],'station-number'),el('strong',stage[0]),el('span',stage[1],'station-owner'));
     let label=scope.candidate ? (tasks.length ? `${completed}/${tasks.length} tasks done` : 'No assigned tasks') : 'Workflow blueprint';
     if(index===6 && scope.candidate){const reviews=(state.rejection_reviews || []).filter(r=>r.candidate===scope.candidate);label=`${reviews.length} recorded lessons`;}
+    const groups=window.workerStatus?.candidate_id===scope.candidate ? window.workerStatus.groups.filter(g=>stage[3].includes(g.title)) : [];
+    const counts=new Map();for(const g of groups)counts.set(g.state,(counts.get(g.state)||0)+g.count);
+    const running=counts.get('running')||0;
+    if(groups.length)label+=` · Workers: ${[...counts].map(([status,count])=>`${count} ${status}`).join(', ')}`;
+    card.classList.toggle('worker-running',running>0);
     card.append(el('span',label,'station-progress'));card.onclick=()=>{selectedOfficeStage=index;renderWorkflow();};$('workflow-floor').append(card);
   });
   renderWorkflowDetail(scope);

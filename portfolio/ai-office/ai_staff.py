@@ -61,7 +61,7 @@ def generate(model,prompt):
     return body['response'].strip()
 
 
-def context(db,task_id,version):
+def context(db,task_id,version,enforce_limit=True):
     task=db.execute('SELECT * FROM tasks WHERE id=?',(task_id,)).fetchone()
     if not task or task['version']!=version or task['status']!='active':
         raise ValueError('Start the task and use its current version before requesting an AI draft')
@@ -73,34 +73,51 @@ def context(db,task_id,version):
     lessons=[dict(r) for r in db.execute('SELECT id,basis,reason,corrective_action FROM rejection_reviews WHERE candidate=? ORDER BY id',(candidate,))]
     payload={'task':dict(task),'staff':dict(agent),'prerequisites':inputs,'verified_master_cv':campaign['resume'] if campaign else None,'rejection_lessons':lessons}
     prompt=json.dumps(payload,ensure_ascii=True,sort_keys=True)
-    if len(prompt)>60000:raise ValueError('Task context exceeds the AI limit; reduce notes or use a smaller scoped task')
+    if enforce_limit and len(prompt)>60000:raise ValueError('Task context exceeds the AI limit; reduce notes or use a smaller scoped task')
     return prompt
+
+
+def prepare_draft(office,task_id,version):
+    model=model_name()
+    with closing(office.connect()) as db,db:
+        db.execute('BEGIN')
+        prompt=context(db,task_id,version)
+    return {'task_id':task_id,'task_version':version,'model':model,'prompt':prompt,
+            'context_prompt':prompt,'draft_digest':hashlib.sha256((SYSTEM+'\n'+model+'\n'+prompt).encode()).hexdigest()}
+
+
+def persist_draft(db,prepared,content,created):
+    task_id,version=prepared['task_id'],prepared['task_version']
+    if context(db,task_id,version)!=prepared['context_prompt']:
+        raise ValueError('Task or source context changed during generation; draft discarded. Refresh and try again.')
+    existing=db.execute('SELECT id,context_digest FROM ai_drafts WHERE task=? AND task_version=?',(task_id,version)).fetchone()
+    if existing:
+        if existing['context_digest']!=prepared['draft_digest']:
+            raise ValueError('Existing AI draft is stale or its source cannot be verified. Save the task to create a new version, then generate again. The old draft has been preserved.')
+        return existing['id']
+    if not isinstance(content,str) or not content.strip() or len(content)>18000:raise ValueError('Invalid AI draft')
+    draft_id=db.execute('INSERT INTO ai_drafts(task,task_version,model,content,created,context_digest) VALUES (?,?,?,?,?,?)',
+        (task_id,version,prepared['model'],'UNVERIFIED AI DRAFT — review facts before use. No external action performed.\n\n'+content,created,prepared['draft_digest'])).lastrowid
+    db.execute('INSERT INTO events(task,message,created) VALUES (?,?,?)',(task_id,'AI draft saved separately; task status unchanged',created))
+    return draft_id
 
 
 def draft(office,data,clock,provider=None):
     task_id,version=data.get('id'),data.get('version')
-    if any(type(v) is not int or not 0<v<=2**63-1 for v in (task_id,version)):
-        raise ValueError('Valid integer task ID and version required')
+    if any(type(v) is not int or not 0<v<=2**63-1 for v in (task_id,version)):raise ValueError('Valid integer task ID and version required')
     if not LOCK.acquire(blocking=False):raise ValueError('An AI draft is already running. Try again when it finishes.')
     try:
-        model=model_name()
-        with closing(office.connect()) as db,db:
-            db.execute('BEGIN')
-            prompt=context(db,task_id,version)
-            fingerprint=hashlib.sha256((SYSTEM+'\n'+model+'\n'+prompt).encode()).hexdigest()
+        prepared=prepare_draft(office,task_id,version)
+        with closing(office.connect()) as db:
             existing=db.execute('SELECT context_digest FROM ai_drafts WHERE task=? AND task_version=?',(task_id,version)).fetchone()
         if existing:
-            if existing['context_digest']!=fingerprint:
+            if existing['context_digest']!=prepared['draft_digest']:
                 raise ValueError('Existing AI draft is stale or its source cannot be verified. Save the task to create a new version, then generate again. The old draft has been preserved.')
             return office.snapshot()
-        result=(provider or generate)(model,prompt)
-        if not isinstance(result,str) or not result.strip() or len(result)>18000:raise ValueError('Invalid AI draft')
+        result=(provider or generate)(prepared['model'],prepared['prompt'])
         with closing(office.connect()) as db,db:
             db.execute('BEGIN IMMEDIATE')
-            if context(db,task_id,version)!=prompt:raise ValueError('Task or source context changed during generation; draft discarded. Refresh and try again.')
-            db.execute('INSERT OR IGNORE INTO ai_drafts(task,task_version,model,content,created,context_digest) VALUES (?,?,?,?,?,?)',
-                       (task_id,version,model,'UNVERIFIED AI DRAFT — review facts before use. No external action performed.\n\n'+result,clock(),fingerprint))
-            db.execute('INSERT INTO events(task,message,created) VALUES (?,?,?)',(task_id,'AI draft saved separately; task status unchanged',clock()))
+            persist_draft(db,prepared,result,clock())
         return office.snapshot()
     finally:LOCK.release()
 

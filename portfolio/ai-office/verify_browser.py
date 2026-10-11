@@ -259,4 +259,7 @@ def main():
             server.shutdown(); worker.join(); server.server_close()
 
 
-if __name__ == '__main__': main()
+if __name__ == '__main__':
+    main()
+    from verify_worker_browser import main as verify_workers_browser
+    verify_workers_browser()

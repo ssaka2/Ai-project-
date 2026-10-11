@@ -9,13 +9,16 @@ import unicodedata
 import recruiting
 import staff_chat
 import ai_staff
+import worker_store
+import worker_registry
+import worker_runtime
 import application_learning
 import sqlite3
 from contextlib import closing
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlsplit
+from urllib.parse import urlsplit, parse_qs
 
 ROOT = Path(__file__).resolve().parent
 STATUSES = ('queued', 'active', 'review', 'done')
@@ -195,6 +198,7 @@ class Office:
                 db.execute('ALTER TABLE tasks ADD COLUMN project INTEGER REFERENCES projects(id)')
             if 'candidate' not in [r['name'] for r in db.execute('PRAGMA table_info(projects)')]:
                 db.execute('ALTER TABLE projects ADD COLUMN candidate INTEGER REFERENCES projects(id)')
+            worker_store.initialize(db)
             db.execute('CREATE INDEX IF NOT EXISTS tasks_project ON tasks(project)')
             if not db.execute('SELECT 1 FROM agents').fetchone():
                 db.executemany('INSERT INTO agents(name,role) VALUES (?,?)', [
@@ -243,6 +247,8 @@ class Office:
             db.execute('BEGIN')
             return {key: [dict(row) for row in db.execute(query)] for key, query in {
                 **recruiting.snapshot_queries(),
+                'automation_settings': 'SELECT * FROM automation_settings ORDER BY candidate_id',
+                'worker_bindings': 'SELECT * FROM worker_bindings ORDER BY task_id',
                 'ai_drafts': 'SELECT * FROM ai_drafts ORDER BY id DESC',
                 'rejection_reviews': 'SELECT * FROM rejection_reviews ORDER BY id DESC',
                 'application_preflights': 'SELECT * FROM application_preflights ORDER BY id DESC',
@@ -341,6 +347,10 @@ class Office:
                     task = db.execute('INSERT INTO tasks(title,brief,agent,project,created) VALUES (?,?,?,?,?)',
                                       (title, brief, teams[team], project, utcnow())).lastrowid
                     tasks.append(task)
+                    executor = ({4:'cv_draft',5:'portfolio_draft',6:'cover_letter_draft'}.get(len(tasks)) if recruiting_office
+                                else {4:'cv_draft',5:'cover_letter_draft'}.get(len(tasks)) if not placement else None)
+                    if executor:
+                        db.execute('INSERT INTO worker_bindings(task_id,executor) VALUES (?,?)',(task,executor))
                     db.executemany('INSERT INTO dependencies(task,prerequisite) VALUES (?,?)', [(task,tasks[parent]) for parent in parents])
                     db.execute('INSERT INTO events(task,message,created) VALUES (?,?,?)', (task, 'Application workflow task created', utcnow()))
                 task, message = None, f'{"Candidate placement" if placement else "Job application"} project created: {name}'
@@ -461,8 +471,11 @@ def make_server(path, port=4521):
             self.send_header('Cache-Control', 'no-store')
             self.send_header('X-Content-Type-Options', 'nosniff')
             self.send_header('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self'; frame-ancestors 'none'; base-uri 'none'")
-            self.end_headers()
-            self.wfile.write(raw)
+            try:
+                self.end_headers()
+                self.wfile.write(raw)
+            except (BrokenPipeError, ConnectionResetError):
+                pass  # Browser navigation can cancel a polling response.
 
         def valid_host(self):
             return self.headers.get('Host') in (f'127.0.0.1:{self.server.server_port}', f'localhost:{self.server.server_port}')
@@ -471,12 +484,25 @@ def make_server(path, port=4521):
             if not self.valid_host():
                 return self.send(403, {'error': 'Local host required'})
             route = urlsplit(self.path).path
+            if route == '/api/capabilities':
+                return self.send(200, {'capabilities': worker_registry.capabilities(office)})
+            if route in ('/api/worker-runs','/api/worker-status'):
+                try:
+                    query=parse_qs(urlsplit(self.path).query)
+                    if any(len(v)!=1 for v in query.values()):raise ValueError('Duplicate query parameter')
+                    candidate=int(query.get('candidate',[''])[0])
+                    if route=='/api/worker-status':return self.send(200,worker_store.workflow_status(office,candidate))
+                    before=int(query['before'][0]) if 'before' in query else None
+                    limit=int(query.get('limit',['25'])[0])
+                    return self.send(200,worker_store.list_runs(office,candidate_id=candidate,before_id=before,limit=limit))
+                except ValueError as exc:return self.send(400,{'error':str(exc)})
             if route == '/api/state':
                 return self.send(200, {**office.snapshot(), 'token': token})
             if route == '/api/export':
                 return self.send(200, office.snapshot())
             assets = {'/': ('index.html', 'text/html; charset=utf-8'),
                       '/app.js': ('app.js', 'text/javascript; charset=utf-8'),
+                      '/workers.js': ('workers.js', 'text/javascript; charset=utf-8'),
                       '/workflow.js': ('workflow.js', 'text/javascript; charset=utf-8'),
                       '/style.css': ('style.css', 'text/css; charset=utf-8')}
             if route not in assets:
@@ -500,6 +526,12 @@ def make_server(path, port=4521):
                 data = json.loads(self.rfile.read(length))
                 if not isinstance(data,dict):
                     raise ValueError('JSON object required')
+                if self.path == '/api/automation-settings':
+                    return self.send(200,worker_store.set_settings(office,data.get('candidate'),data.get('enabled'),data.get('revision'),data.get('portfolio')))
+                if self.path in ('/api/worker-retry','/api/worker-cancel'):
+                    return self.send(200,worker_store.control_run(office,data.get('id'),self.path.rsplit('-',1)[1],data.get('revision')))
+                if self.path == '/api/worker-bind':
+                    return self.send(200,worker_store.bind_task(office,data.get('task'),data.get('executor'),data.get('version')))
                 if self.path == '/api/readiness':
                     return self.send(200, dict(ai_staff.readiness(),checked_at=utcnow()))
                 if self.path == '/api/ai-draft':
@@ -533,6 +565,8 @@ if __name__ == '__main__':
     stop = threading.Event()
     watcher = threading.Thread(target=recruiting.worker, args=(Office(args.db), stop), daemon=True)
     watcher.start()
+    dispatcher = threading.Thread(target=worker_runtime.serve, args=(Office(args.db), stop), daemon=True)
+    dispatcher.start()
     print(f'AI Office: http://127.0.0.1:{server.server_port}', flush=True)
     if args.open:
         threading.Thread(target=webbrowser.open, args=(f'http://127.0.0.1:{server.server_port}',), daemon=True).start()
@@ -544,3 +578,4 @@ if __name__ == '__main__':
         stop.set()
         server.server_close()
         watcher.join(timeout=1)
+        dispatcher.join(timeout=2)

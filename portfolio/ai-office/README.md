@@ -22,7 +22,7 @@ The command starts the Python API, SQLite workspace, and discovery worker and op
 4. Review the result, then approve completion or send it back for revision.
 5. Search the board or export the workspace as JSON.
 
-Agents are **roles for manual planning**, not autonomous AI processes. You perform the work and paste results into the board. Optional local Ollama draft generation is supported; external submission is not connected. Configured Greenhouse/Lever discovery runs in the background when launched with the command above. Scheduling controls when a task can be started; it does not run a task automatically. Refresh to update scheduled availability. Times are entered in the browser's local timezone and stored in UTC.
+Most agents are **roles for reviewed coordination**. The Document workers panel can automatically run explicitly bound CV, portfolio, and cover-letter drafting tasks using local Ollama after prerequisites are completed; other tasks remain manual. External submission is not connected. Configured Greenhouse/Lever discovery runs in the background when launched with the command above. Scheduled document tasks can start automatically when their candidate campaign and document automation are enabled; other scheduled tasks require manual start. Refresh to update scheduled availability. Times are entered in the browser's local timezone and stored in UTC.
 
 ## Included
 
@@ -77,7 +77,7 @@ One Submission Team owns both applying and status checking. The Follow-up Team r
 
 The server enforces these prerequisites. Reopening an input is blocked if dependent work has already started; reopen dependent tasks in reverse order first. Duplicate project names are rejected case-insensitively. Task completion, reassignment, notes, and project history survive restart.
 
-**Execution boundary:** these are working coordination tools for manual tasks, not autonomous workers. Configured Greenhouse/Lever feeds and exact-CV-excerpt draft preparation are available below; optional local model calls are supported, but document parsing and external submission integrations are not connected. The workspace never submits an application or sends a message. Team instructions require actual evidence; the software cannot independently verify a pasted receipt or applicant approval. Leave blocked tasks open. Only mark submitted after completing the application on the real portal. Add your master CV and preferences locally; do not commit personal application data to the public repository.
+**Execution boundary:** the document workers automate draft preparation only; other teams coordinate manual evidence and approval. Configured Greenhouse/Lever feeds and exact-CV-excerpt draft preparation are available below; optional local model calls are supported, but document parsing and external submission integrations are not connected. The workspace never submits an application or sends a message. Team instructions require actual evidence; the software cannot independently verify a pasted receipt or applicant approval. Leave blocked tasks open. Only mark submitted after completing the application on the real portal. Add your master CV and preferences locally; do not commit personal application data to the public repository.
 
 ## Application status desk
 
@@ -89,7 +89,7 @@ Evidence is entered by the local user and is not independently verified. Use Unk
 
 ### Plugin integration boundary
 
-ChatGPT-connected plugins are available to the assistant in the conversation; they are not automatically installed, authenticated, or callable by this standalone Python application. GitHub is used for code and CI. Outlook Email could support reading receipts/status messages after connection; a document provider could supply the approved master CV. Authenticated runtime integrations, credential handling, and model execution are not implemented here; public Greenhouse/Lever discovery is supported. No plugin credentials or personal application records are committed to this public repository. Application teams and placement staff coordinate the workflow; adding roles does not connect external services.
+ChatGPT-connected plugins are available to the assistant in the conversation; they are not automatically installed, authenticated, or callable by this standalone Python application. GitHub is used for code and CI. Outlook Email could support reading receipts/status messages after connection; a document provider could supply the approved master CV. Authenticated external submission/inbox integrations and their credential handling are not implemented here; local Ollama drafting and public Greenhouse/Lever discovery are supported. No plugin credentials or personal application records are committed to this public repository. Application teams and placement staff coordinate the workflow; adding roles does not connect external services.
 
 ## API
 
@@ -107,7 +107,7 @@ POST requests require JSON and the `X-Office-Token` from `/api/state`. Stale ver
 
 ## Limits
 
-Designed for one trusted local user. No accounts, TLS, public hosting, auto-refresh, task deletion, recurring task execution, or independent approver identity. Do not expose the server publicly or tunnel it to the internet. Search, board refresh, pagination, and unrelated saves preserve pending notes and assignments in memory. Reloading/closing the browser loses unsaved edits. Stale drafts retain their original version and cannot overwrite a newer task; copy their contents before using Discard local edits. The API still transfers a full task snapshot, so this is not a server-paginated solution for very large datasets. Agent edits use last-write-wins; task results use version checks. The standard-library HTTP server is for local development, not production hosting.
+Designed for one trusted local user. No accounts, TLS, public hosting, task deletion, or independent approver identity. Worker status refreshes every five seconds while visible; the main board refresh is manual. Do not expose the server publicly or tunnel it to the internet. Search, board refresh, pagination, and unrelated saves preserve pending notes and assignments in memory. Reloading/closing the browser loses unsaved edits. Stale drafts retain their original version and cannot overwrite a newer task; copy their contents before using Discard local edits. The API still transfers a full task snapshot, so this is not a server-paginated solution for very large datasets. Agent edits use last-write-wins; task results use version checks. The standard-library HTTP server is for local development, not production hosting.
 
 
 ## US software candidate placement office
@@ -267,3 +267,46 @@ Greenhouse responses including job descriptions now have a bounded 20 MB respons
 ### Generation failure handling
 
 Model timeouts, unavailable Ollama, missing models, rejected requests, and malformed responses now produce distinct actionable errors without exposing response bodies or candidate text. Responses reporting abnormal termination (including output-limit truncation) are rejected instead of saved. Older responses without a stop reason remain supported. Failed attempts preserve task state and release the inference lock. The timeout is a socket wait, not a guarantee of total execution time; inference can continue in Ollama after disconnection. There is no automatic retry. These paths are verified with synthetic responses, not a live-model performance guarantee.
+
+
+## Persistent document workers
+
+The **Document workers** panel controls real local draft execution. It does not turn the other staffing roles into portal integrations.
+
+1. Run the Python server with an installed local Ollama model selected using AI_OFFICE_MODEL.
+2. Create a candidate, configure its discovery campaign with consent and verified master-CV facts, and create a candidate-linked recruiting workflow.
+3. Complete and review the discovery prerequisites. Verify freshness from source evidence; newly observed is not necessarily newly posted.
+4. Select the candidate in Document workers, supply verified project inventory/links for portfolio drafting, enable automation, and save.
+5. CV, portfolio, and cover-letter workers start eligible due tasks and save separate UNVERIFIED drafts. Review those artifacts before progressing the workflow. The system never approves or submits them automatically.
+
+New document workflow tasks have stable executor bindings. Existing unbound document tasks can be explicitly bound in the panel. Renaming staff does not grant or change execution permissions. Automation defaults off for each candidate.
+
+Runs, attempts, settings, and outputs persist in SQLite. One model call runs at a time, including manual drafting. Transient failures retry after 30 and 120 seconds, stopping at three attempts. Missing facts/models or invalid output become blockers. Retry and cancel controls reject stale revisions. Retry never resends an unknown external outcome. Cancel revokes an active lease; a late result cannot commit. Pausing prevents further valid output commits and new work, but cannot undo a request already sent to the local model. A task may remain active after pausing.
+
+Worker status and capability reporting distinguish configured from execution verified. The 3D view independently refreshes current execution counts for its selected candidate, including while older worker history is displayed; it does not imply job submission. Preserve pending form edits while polling; Reload saved settings explicitly discards local edits. Refresh the main board to see newly saved drafts there.
+
+The worker store uses additive migrations. Before upgrading, stop the service and take a private SQLite backup using the existing backup procedure. Keep the same database path after upgrading. Settings and exports include candidate facts; do not commit them to GitHub.
+
+New API routes (same loopback, token and origin restrictions as existing routes):
+- GET /api/capabilities — executor modes and verified-output evidence.
+- GET /api/worker-runs?candidate=ID&limit=25&before=ID — cursor-paginated history; maximum page size 100.
+- GET /api/worker-status?candidate=ID — latest execution counts per task group, independent of history pagination.
+- POST /api/automation-settings — candidate, enabled (boolean), revision (0 initially), optional portfolio.
+- POST /api/worker-bind — task, executor, version; document tasks only.
+- POST /api/worker-retry and /api/worker-cancel — id and revision.
+
+Run the real-model smoke check with synthetic data only:
+
+```sh
+python portfolio/ai-office/verify_workers.py
+```
+
+It calls the configured local model, verifies one persisted draft after reopening a temporary database, and deletes its test data. Missing model configuration is a failed/unverified check, not a pass. Unit tests inject a synthetic provider and cannot establish live model quality. No model is downloaded automatically.
+
+Additional browser verification:
+
+```sh
+python portfolio/ai-office/verify_worker_browser.py
+```
+
+Submission, inbox tracking, authenticated public candidate chat, and protected public deployment remain unavailable. This release cannot guarantee placement or coverage of all job sites.

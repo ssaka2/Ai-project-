@@ -5,3 +5,5 @@
 [hidden] { display: none !important; }
 #workspace-controls { border: 0; padding: 0; margin: 0; min-width: 0; }
 #connection-help pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+
+.worker-run{border:1px solid var(--line,#d1d5db);padding:1rem;margin-top:.75rem;border-radius:.6rem;overflow-wrap:anywhere}.worker-run pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:24rem;overflow:auto}#worker-panel select{max-width:100%}#worker-panel input[type=checkbox]{width:auto}.office-station.worker-running{outline:3px solid #14b8a6}#worker-capabilities p{overflow-wrap:anywhere}
