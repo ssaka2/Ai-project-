@@ -158,12 +158,6 @@ public class BrowserWorkflowTests
                 Assert.Equal(email, exported.RootElement.GetProperty("Account").GetProperty("Email").GetString());
                 Assert.Equal(1, exported.RootElement.GetProperty("Drafts").GetArrayLength());
             }
-            await using var bobContext = await browser.NewContextAsync(new() { BaseURL = "http://127.0.0.1:5087" });
-            var bob = await bobContext.NewPageAsync();
-            await Register(bob, "bob-browser-" + Guid.NewGuid().ToString("N") + "@example.test");
-            Assert.Equal(404, (await bob.GotoAsync(jobUrl))!.Status);
-            Assert.Equal(404, (await bob.GotoAsync(draftUrl))!.Status);
-            await page.BringToFrontAsync();
             await page.GetByRole(AriaRole.Button, new() { Name = "Sign out", Exact = true }).ClickAsync();
             await Expect(page.GetByRole(AriaRole.Link, new() { Name = "Sign in", Exact = true })).ToBeVisibleAsync();
             await page.GotoAsync("/Identity/Account/ForgotPassword");
@@ -193,6 +187,17 @@ public class BrowserWorkflowTests
             await page.GotoAsync(draftUrl);
             await Expect(page.GetByLabel("Draft text")).ToHaveValueAsync("Saved browser draft");
             Assert.Empty(pageErrors);
+
+            // Finish Alice's workflow before opening another browser window.
+            // Firefox can leave the original window inactive after a context
+            // switch even when BringToFrontAsync has completed; a pointer click
+            // may then focus the window without submitting the reset form.
+            // Keep both cross-account denial assertions, without switching back.
+            await using var bobContext = await browser.NewContextAsync(new() { BaseURL = "http://127.0.0.1:5087" });
+            var bob = await bobContext.NewPageAsync();
+            await Register(bob, "bob-browser-" + Guid.NewGuid().ToString("N") + "@example.test");
+            Assert.Equal(404, (await bob.GotoAsync(jobUrl))!.Status);
+            Assert.Equal(404, (await bob.GotoAsync(draftUrl))!.Status);
             }
             catch
             {
