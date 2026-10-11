@@ -61,9 +61,13 @@ configuring the installed local model:
 sudo -u ai-office env AI_OFFICE_MODEL=YOUR_INSTALLED_MODEL python3 /opt/ai-office/verify_workers.py
 ```
 
-This uses a temporary database and verifies a real generated draft survives a
-reopen. It does not contact job portals or use candidate records. A missing model
-or unsuccessful worker exits nonzero; it must not be reported as verified.
+This uses a temporary database and calls the local model once for each document
+role: CV, portfolio, and cover letter. It checks all three drafts after reopening
+the database and confirms their tasks still require review. The JSON report lists
+each executor separately. It does not contact job portals or use candidate records.
+A missing model or any unsuccessful worker exits nonzero; it must not be reported
+as verified. The three serialized model calls can take several minutes. Passing
+checks storage and execution, not factual accuracy or application submission.
 
 For verify_pilot.py, exit 2 means incomplete or blocked checks, not success. To test live feeds and one synthetic inference, supply real employer board tokens:
 

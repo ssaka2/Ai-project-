@@ -3,7 +3,6 @@ import json
 import os
 import tempfile
 import time
-from contextlib import closing
 from pathlib import Path
 from unittest.mock import patch
 import ai_staff
@@ -26,20 +25,36 @@ def verify(provider=None, model=None):
         for task in tasks[:3]:
             for version,status in enumerate(('active','review','done'),1):
                 app.mutate('update',{'id':task['id'],'version':version,'status':status,'result':'Synthetic fixture evidence only; no real application.'})
-        with closing(app.connect()) as db,db:
-            db.execute('DELETE FROM worker_bindings WHERE task_id!=?',(tasks[3]['id'],))
-        worker_store.set_settings(app,candidate,True,0)
+        worker_store.set_settings(app,candidate,True,0,
+            portfolio='Fictional Example API: Python REST service; synthetic fixture project, no public deployment.')
         worker_runtime.enqueue_eligible(app,now=time.time())
-        worker_runtime.run_once(app,provider=provider or ai_staff.generate)
+        # Exactly one attempt per role. No hidden retries or indefinite smoke run.
+        for _ in worker_store.DRAFT_EXECUTORS:
+            worker_runtime.run_once(app,provider=provider or ai_staff.generate)
         reopened=Office(app.path)
-        runs=worker_store.list_runs(reopened,candidate_id=candidate)['runs'];drafts=reopened.snapshot()['ai_drafts']
-        if len(runs)!=1 or runs[0]['state']!='succeeded':
-            raise RuntimeError('Worker smoke failed: '+(runs[0]['state']+' / '+runs[0]['error_code'] if runs else 'no run'))
-        if len(drafts)!=1 or not drafts[0]['content'].startswith('UNVERIFIED AI DRAFT'):
-            raise RuntimeError('Worker smoke failed: missing or invalid persisted draft')
-        task=next(t for t in reopened.snapshot()['tasks'] if t['id']==tasks[3]['id'])
-        if task['status']!='active':raise RuntimeError('Worker changed the approval state')
-        return {'verification':'injected_provider' if provider else 'local_ollama','model':selected,'runs':1,'drafts':1,'task_status':task['status']}
+        runs=worker_store.list_runs(reopened,candidate_id=candidate)['runs']
+        snapshot=reopened.snapshot()
+        drafts={draft['id']:draft for draft in snapshot['ai_drafts']}
+        saved_tasks={task['id']:task for task in snapshot['tasks']}
+        if len(runs)!=3 or {run['executor'] for run in runs}!=set(worker_store.DRAFT_EXECUTORS):
+            raise RuntimeError('Worker smoke failed: expected one run for each of the three document roles')
+        evidence=[]
+        for run in sorted(runs,key=lambda row:row['executor']):
+            executor=run['executor']
+            if run['state']!='succeeded':
+                raise RuntimeError(f"Worker smoke failed: {executor} / {run['state']} / {run['error_code']}")
+            draft=drafts.get(run['result_ref'])
+            if (not draft or draft['task']!=run['task_id'] or draft['model']!=selected
+                    or not draft['content'].startswith('UNVERIFIED AI DRAFT')):
+                raise RuntimeError(f'Worker smoke failed: {executor} / missing or invalid persisted draft')
+            task=saved_tasks[run['task_id']]
+            if task['status']!='active':
+                raise RuntimeError(f'Worker changed the approval state: {executor}')
+            evidence.append({'executor':executor,'state':run['state'],'persisted':True,'task_status':task['status']})
+        if len(drafts)!=3:
+            raise RuntimeError('Worker smoke failed: unexpected persisted draft count')
+        return {'verification':'injected_provider' if provider is not None else 'local_ollama',
+                'model':selected,'runs':len(runs),'drafts':len(drafts),'task_status':'active','executors':evidence}
 
 
 if __name__=='__main__':
