@@ -10,7 +10,7 @@ Requires systemd, `/usr/bin/python3` version 3.11+, and an existing SSH account.
 /usr/bin/python3 --version
 sudo useradd --system --user-group --home-dir /var/lib/ai-office --shell /usr/sbin/nologin ai-office
 sudo install -d -m 0755 /opt/ai-office
-sudo install -m 0644 office.py recruiting.py lever_source.py ai_staff.py application_learning.py staff_chat.py app.js workflow.js index.html style.css verify_pilot.py /opt/ai-office/
+sudo install -m 0644 office.py recruiting.py lever_source.py ai_staff.py application_learning.py staff_chat.py worker_store.py worker_registry.py worker_runtime.py app.js workflow.js workers.js index.html style.css verify_pilot.py verify_workers.py /opt/ai-office/
 sudo install -m 0600 deploy/ai-office.env.example /etc/ai-office.env
 sudo install -m 0644 deploy/ai-office.service /etc/systemd/system/ai-office.service
 sudo systemctl daemon-reload
@@ -19,6 +19,22 @@ sudo systemctl status ai-office --no-pager
 ```
 
 The service user owns the private database directory created by systemd. Code remains root-owned and read-only to the service. Install and run Ollama separately on the same VM if model drafts are required. Set `AI_OFFICE_MODEL` in `/etc/ai-office.env` to an installed model name using `sudoedit`, then restart `ai-office`. The package does not choose hardware or automatically download models.
+
+## Updating an existing installation
+
+Do not rerun the fresh-install user/configuration steps over an existing service.
+Stop the service and create a private SQLite backup before replacing runtime files.
+Preserve the existing database path and /etc/ai-office.env; do not replace that
+file with the example. Copy every runtime file from the installation command
+above, including all three worker modules and workers.js, from the same pinned
+repository commit. Restart the service, check its journal, and verify that the
+existing candidate/task records remain. Automatic document work remains disabled
+until explicitly enabled for a candidate.
+
+The repository test test_deploy_package.py builds a temporary directory from the
+exact documented file list, starts its HTTP server, and verifies the state API,
+worker capability API, and workers.js. This catches missing runtime files before
+a deployment; it is not a live VM or model test.
 
 ## Private access
 
@@ -38,7 +54,18 @@ On the VM, first run:
 python3 /opt/ai-office/verify_pilot.py
 ```
 
-Exit 2 means incomplete or blocked checks, not success. To test live feeds and one synthetic inference, supply real employer board tokens:
+For the persistent document worker, also run the synthetic-data check after
+configuring the installed local model:
+
+```sh
+sudo -u ai-office env AI_OFFICE_MODEL=YOUR_INSTALLED_MODEL python3 /opt/ai-office/verify_workers.py
+```
+
+This uses a temporary database and verifies a real generated draft survives a
+reopen. It does not contact job portals or use candidate records. A missing model
+or unsuccessful worker exits nonzero; it must not be reported as verified.
+
+For verify_pilot.py, exit 2 means incomplete or blocked checks, not success. To test live feeds and one synthetic inference, supply real employer board tokens:
 
 ```sh
 python3 /opt/ai-office/verify_pilot.py --test-model --board YOUR_GREENHOUSE_TOKEN --board lever:YOUR_LEVER_TOKEN
