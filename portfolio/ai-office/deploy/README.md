@@ -126,3 +126,19 @@ On October 8, 2026, this test passed with the actual Caddy executable: TLS
 certificate validation, authentication on page/API/export/assets, foreign-origin
 rejection, missing-token rejection, and an authenticated database write/read.
 It does not verify public DNS, Azure firewall rules, or a live deployment.
+
+## Background-worker supervision
+
+The command-line server checks that the job-discovery and document-dispatcher
+threads remain alive. If either loop exits unexpectedly, the server shuts down
+with a nonzero exit and a `Background worker stopped` message naming the component.
+The supplied systemd unit then applies its existing `Restart=on-failure` policy.
+Normal shutdown discards unfinished generated output and leaves eligible document
+work on the bounded retry path instead of marking its unchanged inputs invalid.
+
+Use `systemctl status ai-office` and `journalctl -u ai-office` to inspect failures.
+Repeated faults still require investigation; systemd may stop restarting after its
+start limit. This checks thread exit, not a live-but-stalled thread, persistent
+storage degradation, model accuracy, or external provider availability. It is active
+only after this code is installed and the service is running. The entrypoint tests
+use synthetic model output and do not establish live-model readiness.

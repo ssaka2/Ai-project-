@@ -85,8 +85,12 @@ def run_once(office, *, now_fn=time.time, provider=ai_staff.generate, stop=None)
         with closing(office.connect()) as db, db:
             db.execute('BEGIN IMMEDIATE')
             current=registry.prepare_db(db,run['task_id'],run['executor'])
-            if (stop and stop.is_set()) or current['fingerprint']!=prepared['fingerprint'] or current['blocker']:
+            if current['fingerprint']!=prepared['fingerprint'] or current['blocker']:
                 store.finish_db(db,run['id'],run['lease_token'],state='blocked',now=now_fn(),error_code='inputs_changed')
+            elif stop and stop.is_set():
+                # A process restart does not invalidate unchanged source facts.
+                # Discard this output and use the existing bounded retry policy.
+                store.finish_db(db,run['id'],run['lease_token'],state='retry_wait',now=now_fn(),error_code='shutdown_interrupted')
             elif store.live(db,run['id'],run['lease_token'],now_fn()):
                 draft_id=ai_staff.persist_draft(db,prepared,result,datetime.now(timezone.utc).isoformat())
                 if not store.finish_db(db,run['id'],run['lease_token'],state='succeeded',now=now_fn(),result_ref=draft_id):

@@ -50,6 +50,31 @@ class RuntimeTests(unittest.TestCase):
         self.assertEqual(self.app.snapshot()['ai_drafts'],[])
         self.assertEqual(self.rows()[0]['state'],'blocked')
 
+    def test_shutdown_during_call_retries_after_database_reopen(self):
+        import threading
+        stop=threading.Event()
+        runtime.enqueue_eligible(self.app,now=self.now)
+        def interrupted(m,p):
+            stop.set()
+            return 'Shutdown output must not be saved'
+        runtime.run_once(self.app,now_fn=lambda:self.now,provider=interrupted,stop=stop)
+        self.assertEqual(self.app.snapshot()['ai_drafts'],[])
+        row=self.rows()[0]
+        self.assertEqual((row['state'],row['error_code']),('retry_wait','shutdown_interrupted'))
+        self.assertEqual(row['attempts'],1)
+        self.app=type(self.app)(self.app.path)
+        runtime.enqueue_eligible(self.app,now=self.now)
+        self.assertFalse(runtime.run_once(self.app,now_fn=lambda:self.now,
+            provider=lambda m,p:self.fail('Retry backoff must be respected'),stop=threading.Event()))
+        self.now=row['due_at']
+        self.assertTrue(runtime.run_once(self.app,now_fn=lambda:self.now,
+            provider=lambda m,p:'Completed after restart',stop=threading.Event()))
+        row=self.rows()[0]
+        self.assertEqual((row['state'],row['attempts']),('succeeded',2))
+        drafts=self.app.snapshot()['ai_drafts']
+        self.assertEqual(len(drafts),1)
+        self.assertTrue(drafts[0]['content'].endswith('Completed after restart'))
+
     def test_edit_during_call_discards_output(self):
         def edit(m,p):
             task=next(t for t in self.app.snapshot()['tasks'] if t['id']==self.tasks[3]['id'])

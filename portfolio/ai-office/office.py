@@ -455,6 +455,18 @@ class Conflict(ValueError):
     pass
 
 
+class OfficeHTTPServer(ThreadingHTTPServer):
+    background_workers = ()
+
+    def service_actions(self):
+        super().service_actions()
+        # Fail the process if a required loop exits. A live HTTP socket alone
+        # must not prevent systemd's Restart=on-failure from recovering service.
+        for worker in self.background_workers:
+            if not worker.is_alive():
+                raise RuntimeError('Background worker stopped: ' + worker.name)
+
+
 def make_server(path, port=4521):
     office = Office(path)
     token = secrets.token_urlsafe(32)
@@ -552,7 +564,7 @@ def make_server(path, port=4521):
             except sqlite3.Error:
                 self.send(503, {'error': 'Storage unavailable; retry shortly'})
 
-    return ThreadingHTTPServer(('127.0.0.1', port), Handler)
+    return OfficeHTTPServer(('127.0.0.1', port), Handler)
 
 
 if __name__ == '__main__':
@@ -563,10 +575,11 @@ if __name__ == '__main__':
     args = parser.parse_args()
     server = make_server(args.db, args.port)
     stop = threading.Event()
-    watcher = threading.Thread(target=recruiting.worker, args=(Office(args.db), stop), daemon=True)
+    watcher = threading.Thread(name="job-discovery", target=recruiting.worker, args=(Office(args.db), stop), daemon=True)
     watcher.start()
-    dispatcher = threading.Thread(target=worker_runtime.serve, args=(Office(args.db), stop), daemon=True)
+    dispatcher = threading.Thread(name="document-dispatcher", target=worker_runtime.serve, args=(Office(args.db), stop), daemon=True)
     dispatcher.start()
+    server.background_workers = (watcher, dispatcher)
     print(f'AI Office: http://127.0.0.1:{server.server_port}', flush=True)
     if args.open:
         threading.Thread(target=webbrowser.open, args=(f'http://127.0.0.1:{server.server_port}',), daemon=True).start()
