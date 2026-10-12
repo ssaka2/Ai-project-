@@ -1,19 +1,32 @@
 # Alternative test shutdown safeguard
 
-Status: prepared, not deployed or live-tested. No identity or role assignment has
-been created by adding these files. The current VM is deallocated.
+## Recorded setup and remaining verification
+
+Observed October 10, 2026: the approved `ai-office-shutdown` Automation account
+was created in **West US**, with a system-assigned managed identity and the
+`AI Office VM Deallocator` custom role assigned at the exact target VM resource.
+The `Stop-OfficeVm` PowerShell runbook was published. Its test job completed with
+`VM already deallocated.` This verified the read/idempotent path, not shutdown of
+a running VM. No one-time shutdown schedule was created during that setup.
+
+The VM was independently observed as stopped/deallocated on October 11, 2026.
+These are dated observations, not a live status query. Read back the resources,
+identity, role scope, runbook and VM state before any future pilot. Reuse the
+existing approved resources if they still match; do not recreate them blindly.
+A new enabled one-time schedule with verified parameters is still required
+before starting the VM.
 
 The built-in shutdown scheduler rejected Mexico Central as unsupported. A schedule
 in Central US was also rejected because it must be colocated with its target VM.
 Azure Automation is a separate service and runs its runbook against Azure Resource
 Manager; the runbook does not need to run on the target VM.
 
-## Exact access proposal
+## Approved access scope
 
-Create an Automation account in Central US (a region allowed by the observed
-subscription policy), using a system-assigned managed identity. Register the
-`AI Office VM Deallocator` custom role from `stop-vm-role.template.json` with the
-actual subscription and resource group. Assign it to that identity **at the exact
+The observed Automation deployment is in West US. Central US was part of the
+initial proposal and is not the installed account location. For this installation,
+verify the existing system-assigned identity and `AI Office VM Deallocator` role
+against `stop-vm-role.template.json`. Its assignment must remain **at the exact
 resource ID of ssaka2-portfolio-vm**, never at subscription or resource-group
 scope. The assignable scope in the definition is where the role may be assigned;
 it is not a role assignment and grants no permissions itself.
@@ -22,18 +35,19 @@ The three allowed operations read VM metadata/power state and deallocate it.
 There are no candidate-data, mailbox, secret-store, VM command execution, VM
 creation, restart, resize, deletion, or role-administration permissions.
 
-Creating this cloud identity and permission grant requires explicit approval.
-The existing approval for a one-hour VM test does not silently grant a new
-identity access to the subscription. Check Automation availability and account
-usage/pricing before deployment; do not promise this is unconditionally free.
+The existing identity and narrow assignment were explicitly approved during
+setup. That approval does not authorize broader permissions or a replacement
+identity. Verify account usage and costs before a pilot; do not promise hosting
+is unconditionally free.
 
 ## Installation and acceptance gates
 
-1. Create the Automation account and identity; do not start the VM yet.
-2. Import compatible Az.Accounts and Az.Compute modules into its PowerShell
-   runtime. Import and publish `Stop-OfficeVm.ps1`.
-3. Apply the approved custom role assignment at the one VM resource ID. Wait for
-   role propagation; never expand the role to fix a propagation delay.
+1. Read back the existing West US Automation account and identity; do not start
+   the VM yet. Resolve any missing or unexpected configuration before launch.
+2. Verify compatible Az.Accounts and Az.Compute modules in its PowerShell runtime
+   and confirm the published `Stop-OfficeVm.ps1` content.
+3. Verify the approved role assignment remains at the one VM resource ID. Never
+   expand the role to fix a permission or propagation error.
 4. Run the runbook against the already-deallocated VM. Confirm the job completes
    and prints `VM already deallocated.`. Inspect the actual role assignment scope.
 5. Register a one-time UTC shutdown schedule before starting the test. Bind its
@@ -53,7 +67,7 @@ usage/pricing before deployment; do not promise this is unconditionally free.
 
 Only after this test can ongoing hosting be planned with an explicit budget and
 availability requirements. Single-operator HTTPS does not add candidate accounts,
-automatic applications, mailbox OAuth, or autonomous staff execution.
+automatic applications, mailbox OAuth, or verified live-model execution.
 
 Official references:
 - https://learn.microsoft.com/en-us/azure/automation/enable-managed-identity-for-automation
