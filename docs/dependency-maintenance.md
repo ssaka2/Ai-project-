@@ -35,3 +35,17 @@ Updates are proposed as pull requests. This configuration does not automatically
 Go Health Probe, Rust Log Metrics, and the two Node.js services currently have no third-party package dependencies. Add dependency monitoring when introducing such packages.
 
 See [GitHub's supported ecosystems](https://docs.github.com/en/code-security/reference/supply-chain-security/supported-ecosystems-and-repositories) for supported update mechanisms.
+
+## October 16, 2026 security maintenance
+
+The post-merge audit in Actions run 38851990043 found
+`System.Security.Cryptography.Pkcs` 10.0.0 transitively in both the web and test
+projects. The web project now explicitly references 10.0.13, the patched version
+for GHSA-846f-f764-76mx and GHSA-2fmv-rv2c-59x7. This reference flows to the test
+project through its project reference; do not remove it until the resolved
+transitive dependency is independently patched. The advisory gate remains enabled.
+
+The standalone CI SMTP inbox now uses Mailpit 1.31.4, matching Compose.
+Validation requires the existing dependency audit, SQL and browser tests, and
+Docker startup/restart checks to pass on the fix commit. This dependency change
+does not supply production SQL, SMTP, storage, or a public deployment.
