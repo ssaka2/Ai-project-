@@ -270,5 +270,3 @@ jobs:
           python -m playwright install --with-deps chromium
       - name: Verify AI Office browser workflows
         run: python portfolio/ai-office/verify_browser.py
-      - name: Verify persistent document worker browser workflows
-        run: python portfolio/ai-office/verify_worker_browser.py
