@@ -45,7 +45,8 @@ for GHSA-846f-f764-76mx and GHSA-2fmv-rv2c-59x7. This reference flows to the tes
 project through its project reference; do not remove it until the resolved
 transitive dependency is independently patched. The advisory gate remains enabled.
 
-The standalone CI SMTP inbox now uses Mailpit 1.31.4, matching Compose.
+The standalone CI SMTP inbox now uses Mailpit 1.31.4, matching Compose. (Both were later
+raised to 1.31.6 together.)
 Validation requires the existing dependency audit, SQL and browser tests, and
 Docker startup/restart checks to pass on the fix commit. This dependency change
 does not supply production SQL, SMTP, storage, or a public deployment.
