@@ -6,8 +6,13 @@ trap 'printf "VPN verification failed at line %s (exit %s)\n" "$LINENO" "$?" >&2
 api_base=${VPN_API_BASE:-http://127.0.0.1:8090}
 server_ns="vpn-test-server-$$"
 client_ns="vpn-test-client-$$"
-test_dir=$(mktemp -d)
 umask 077
+# Ubuntu confines wg to /etc/wireguard; temporary files under /tmp are denied.
+# Use a unique private directory and remove only that directory during cleanup.
+if [[ ! -d /etc/wireguard ]]; then
+  install -d -m 700 /etc/wireguard
+fi
+test_dir=$(mktemp -d /etc/wireguard/ci-tunnel.XXXXXX)
 cleanup() {
   ip netns del "$server_ns" 2>/dev/null || true
   ip netns del "$client_ns" 2>/dev/null || true
@@ -57,10 +62,8 @@ for ns in "$server_ns" "$client_ns"; do
   ip -n "$ns" link set lo up
   ip -n "$ns" link add wg0 type wireguard
 done
-# Open the private configuration before entering the network/mount namespace.
-# Pass it through stdin without exposing key contents or relaxing file permissions.
-ip netns exec "$server_ns" wg setconf wg0 /dev/stdin < "$test_dir/server.conf"
-ip netns exec "$client_ns" wg setconf wg0 /dev/stdin < "$test_dir/client.conf"
+ip netns exec "$server_ns" wg setconf wg0 "$test_dir/server.conf"
+ip netns exec "$client_ns" wg setconf wg0 "$test_dir/client.conf"
 ip -n "$server_ns" address add 10.77.0.1/24 dev wg0
 ip -n "$client_ns" address add "$(cat "$test_dir/address")" dev wg0
 ip -n "$server_ns" link set wg0 up
@@ -71,7 +74,7 @@ printf 'PASS: actual WireGuard tunnel carries traffic\n'
 curl --fail --silent -X DELETE -H "Authorization: Bearer $VPN_API_TOKEN" "$api_base/api/peers/$(cat "$test_dir/id")" > /dev/null
 curl --fail --silent -H "Authorization: Bearer $VPN_API_TOKEN" "$api_base/api/wireguard/peers.conf" > "$test_dir/peers.conf"
 cat "$test_dir/server-base.conf" "$test_dir/peers.conf" > "$test_dir/server.conf"
-ip netns exec "$server_ns" wg setconf wg0 /dev/stdin < "$test_dir/server.conf"
+ip netns exec "$server_ns" wg setconf wg0 "$test_dir/server.conf"
 if ip netns exec "$client_ns" ping -c 1 -W 2 10.77.0.1; then
   echo 'FAIL: revoked peer still reaches server' >&2
   exit 1
