@@ -108,6 +108,15 @@ jobs:
         run: |
           node --check dist/app.js
           node --test test-evaluate.mjs
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+      - name: Install Chromium for Web Lab verification
+        run: |
+          python -m pip install -r portfolio/booking-web-api/requirements-browser.txt
+          python -m playwright install --with-deps chromium
+      - name: Verify Web Lab interactions in Chromium
+        run: python portfolio/ai-engineering-web-lab/verify_browser.py
 
   go-health-probe:
     runs-on: ubuntu-latest
