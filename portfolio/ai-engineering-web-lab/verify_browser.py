@@ -35,10 +35,12 @@ try:
                 page.get_by_label('Require valid JSON').check()
                 page.get_by_role('button', name='Evaluate response', exact=True).click()
                 expect(page.locator('#stats')).to_contain_text('All selected rules passed')
-                page.get_by_label('Response to evaluate').fill('invalid JSON')
+                page.get_by_label('Response to evaluate').fill('ready is not valid JSON')
                 page.get_by_role('button', name='Evaluate response', exact=True).click()
                 expect(page.locator('#stats')).to_contain_text('Review the failed checks')
-                assert page.locator('#checks .fail').count() > 0
+                expect(page.locator('#checks li').filter(has_text='Valid JSON syntax').locator('strong')).to_have_text('FAIL')
+                expect(page.locator('#checks li').filter(has_text='Required: ready').locator('strong')).to_have_text('PASS')
+                expect(page.locator('#checks .fail')).to_have_count(1)
                 assert not errors, errors
                 page.close()
                 print(f'PASS Chromium {width}px: evaluation, failure feedback, JSON rules, report download, stale report prevention, project cards.')
