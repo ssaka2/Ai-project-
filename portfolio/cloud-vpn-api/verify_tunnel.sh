@@ -1,12 +1,18 @@
 #!/usr/bin/env bash
 # CI-only isolated integration test. Requires root, iproute2, WireGuard tools, curl, Python.
-set -euo pipefail
+set -Eeuo pipefail
+trap 'printf "VPN verification failed at line %s (exit %s)\n" "$LINENO" "$?" >&2' ERR
 : "${VPN_API_TOKEN:?Set VPN_API_TOKEN}"
 api_base=${VPN_API_BASE:-http://127.0.0.1:8090}
 server_ns="vpn-test-server-$$"
 client_ns="vpn-test-client-$$"
-test_dir=$(mktemp -d)
 umask 077
+# Ubuntu confines wg to /etc/wireguard; temporary files under /tmp are denied.
+# Use a unique private directory and remove only that directory during cleanup.
+if [[ ! -d /etc/wireguard ]]; then
+  install -d -m 700 /etc/wireguard
+fi
+test_dir=$(mktemp -d /etc/wireguard/ci-tunnel.XXXXXX)
 cleanup() {
   ip netns del "$server_ns" 2>/dev/null || true
   ip netns del "$client_ns" 2>/dev/null || true
