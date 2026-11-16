@@ -6,7 +6,7 @@ RUN dotnet tool restore
 RUN dotnet publish src/AiCareerDesk.Web/AiCareerDesk.Web.csproj -c Release --no-restore -o /out
 RUN dotnet ef migrations bundle --project src/AiCareerDesk.Web --configuration Release --self-contained -r linux-x64 --output /out/migrate
 
-FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:11.0 AS runtime
 USER root
 RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
