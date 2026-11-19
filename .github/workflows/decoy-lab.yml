@@ -1,0 +1,33 @@
+name: Decoy lab verification
+on:
+  push:
+    paths: ['portfolio/decoy-lab/**', '.github/workflows/decoy-lab.yml']
+  pull_request:
+    paths: ['portfolio/decoy-lab/**', '.github/workflows/decoy-lab.yml']
+permissions:
+  contents: read
+concurrency:
+  group: decoy-lab-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: portfolio/decoy-lab
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Test HTTP behavior and isolation controls
+        run: python -m unittest -v
+      - name: Check dashboard JavaScript
+        run: node --check app.js
+      - name: Install Chromium testing dependencies
+        run: |
+          python -m pip install -r requirements-browser.txt
+          python -m playwright install --with-deps chromium
+      - name: Verify desktop and mobile Chromium
+        run: python verify_browser.py
