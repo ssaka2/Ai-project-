@@ -149,15 +149,6 @@ public class BrowserWorkflowTests
             await page.GetByRole(AriaRole.Link, new() { Name = "My resumes", Exact = true }).ClickAsync();
             await Expect(page.GetByRole(AriaRole.Heading, new() { Name = "My resumes", Exact = true })).ToBeVisibleAsync();
 
-            await page.GetByRole(AriaRole.Link, new() { Name = "Export my data", Exact = true }).ClickAsync();
-            var export = await page.RunAndWaitForDownloadAsync(() =>
-                page.GetByRole(AriaRole.Link, new() { Name = "Download my data (.json)" }).ClickAsync());
-            await using (var stream = await export.CreateReadStreamAsync())
-            using (var exported = await JsonDocument.ParseAsync(stream!))
-            {
-                Assert.Equal(email, exported.RootElement.GetProperty("Account").GetProperty("Email").GetString());
-                Assert.Equal(1, exported.RootElement.GetProperty("Drafts").GetArrayLength());
-            }
             await page.GetByRole(AriaRole.Button, new() { Name = "Sign out", Exact = true }).ClickAsync();
             await Expect(page.GetByRole(AriaRole.Link, new() { Name = "Sign in", Exact = true })).ToBeVisibleAsync();
             await page.GotoAsync("/Identity/Account/ForgotPassword");
@@ -186,6 +177,16 @@ public class BrowserWorkflowTests
             await Expect(page.GetByRole(AriaRole.Button, new() { Name = "Sign out", Exact = true })).ToBeVisibleAsync();
             await page.GotoAsync(draftUrl);
             await Expect(page.GetByLabel("Draft text")).ToHaveValueAsync("Saved browser draft");
+            // Finish pointer-driven account workflows before opening the browser download UI.
+            await page.GetByRole(AriaRole.Link, new() { Name = "Export my data", Exact = true }).ClickAsync();
+            var export = await page.RunAndWaitForDownloadAsync(() =>
+                page.GetByRole(AriaRole.Link, new() { Name = "Download my data (.json)" }).ClickAsync());
+            await using (var stream = await export.CreateReadStreamAsync())
+            using (var exported = await JsonDocument.ParseAsync(stream!))
+            {
+                Assert.Equal(email, exported.RootElement.GetProperty("Account").GetProperty("Email").GetString());
+                Assert.Equal(1, exported.RootElement.GetProperty("Drafts").GetArrayLength());
+            }
             Assert.Empty(pageErrors);
 
             // Finish Alice's workflow before opening another browser window.
